@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.storage import Store
@@ -59,12 +60,6 @@ SENSOR_TYPES = {
         "device_class": SensorDeviceClass.VOLUME_FLOW_RATE,
         "state_class": SensorStateClass.MEASUREMENT,
     },
-    "mcurrent": {
-        "name": "Chlorine Cell Current",
-        "unit": "mA",
-        "device_class": SensorDeviceClass.CURRENT,
-        "state_class": SensorStateClass.MEASUREMENT,
-    },
     "mregstatus": {
         "name": "Regeneration Status",
         "unit": None,
@@ -108,6 +103,13 @@ SECOND_EXCHANGER_SENSOR_TYPES = {
 # Additional fields of the /update payload. Created only if the device
 # reports the field.
 UPDATE_EXTRA_SENSOR_TYPES = {
+    # Not reported by the softliQ SE21
+    "mcurrent": {
+        "name": "Chlorine Cell Current",
+        "unit": "mA",
+        "device_class": SensorDeviceClass.CURRENT,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
     "mcountwater1": {
         "name": "Soft Water Meter Exchanger 1",
         "unit": "m³",
@@ -454,8 +456,15 @@ async def async_setup_entry(
     extra_types = dict(UPDATE_EXTRA_SENSOR_TYPES)
     if coordinator.features.second_exchanger:
         extra_types = {**SECOND_EXCHANGER_SENSOR_TYPES, **extra_types}
+    registry = er.async_get(hass)
     for key, info in extra_types.items():
         if key not in coordinator.data:
+            # Remove entities of fields this device does not report, e.g.
+            # created by an earlier version that always added them
+            if entity_id := registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{coordinator.device_id}_{key}"
+            ):
+                registry.async_remove(entity_id)
             continue
         entities.append(
             GruenbeckCloudSensor(

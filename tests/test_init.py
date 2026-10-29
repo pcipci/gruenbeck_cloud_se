@@ -58,6 +58,20 @@ async def test_obsolete_entities_removed(hass, setup_integration):
     assert all(registry.async_get(entity_id) is None for entity_id in old.values())
 
 
+async def test_unreported_fields_removed(hass, setup_integration):
+    """Sensors of /update fields the device does not report are not kept."""
+    registry = er.async_get(hass)
+    old = {}
+
+    def create_old(entry):
+        old["mcurrent"] = registry.async_get_or_create(
+            "sensor", DOMAIN, f"{DEVICE_ID}_mcurrent", config_entry=entry
+        ).entity_id
+
+    await setup_integration(before=create_old)
+    assert registry.async_get(old["mcurrent"]) is None
+
+
 @pytest.mark.parametrize(
     ("series", "device_type", "model", "salt", "led", "exchanger_2"),
     [
