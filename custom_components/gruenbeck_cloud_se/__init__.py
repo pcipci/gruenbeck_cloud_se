@@ -10,6 +10,7 @@ from pygruenbeck_cloud import PyGruenbeckCloud
 from .const import CONF_DEVICE_ID, DOMAIN, LOGGER, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
 from .coordinator import GruenbeckDataUpdateCoordinator
 from .entity import ENTITY_GROUPS
+from .models import device_name
 
 # Exchanger 2 entities of earlier versions, removed on single exchanger
 # devices (softliQ SE) only
@@ -22,6 +23,8 @@ SECOND_EXCHANGER_ENTITIES = {
 
 # Entities of earlier versions that no longer exist: (platform, key)
 OBSOLETE_ENTITIES = {
+    # Sum of the daily values: not a daily value, duplicates salt_total
+    ("sensor", "salt_daily_sum"),
     ("sensor", "mregpercent2"),
     ("sensor", "mreswatadmod"),
     ("sensor", "mlime"),
@@ -45,7 +48,6 @@ PLATFORMS: list[Platform] = [
     Platform.DATE,
     Platform.BUTTON,
 ]
-
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Grünbeck Cloud SE from a config entry."""
@@ -74,6 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     await coordinator.async_load_service_dates()
+    await coordinator.async_load_salt_refills()
     await coordinator.async_load_setting_changes()
 
     # Fetch initial data before completing setup
@@ -89,7 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     main_device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, device_id)},
-        name="Grünbeck SoftliQ SE",
+        name=device_name(coordinator.features, "plant", hass.config.language),
         manufacturer="Grünbeck",
         model=coordinator.features.model,
         sw_version=info.get("swVersion"),
@@ -102,7 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         group_device = device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, f"{device_id}_{group}")},
-            translation_key=group,
+            name=device_name(coordinator.features, group, hass.config.language),
             manufacturer="Grünbeck",
         )
         if group_device.via_device_id != main_device.id:

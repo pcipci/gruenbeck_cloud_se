@@ -23,8 +23,8 @@ DESCRIPTIONS: dict[str, dict[str, str]] = {
         "de": "Anzahl der Regenerationen seit der Inbetriebnahme.",
     },
     "msaltusage": {
-        "en": "Total salt usage as reported by the device. Stays at 0 on some SE models, use the sum of daily values instead.",
-        "de": "Gesamter Salzverbrauch laut Anlage. Bleibt bei manchen SE-Modellen auf 0, dann die Summe der Tageswerte verwenden.",
+        "en": "Salt counter of the unit itself. It only counts whole kilograms, so it jumps in steps and can stay at 0 for a long time. For exact values use \"Salt usage total\".",
+        "de": "Salzzähler der Anlage selbst. Er zählt nur ganze Kilogramm, springt also in Schritten und kann lange auf 0 bleiben. Für genaue Werte „Salzverbrauch gesamt“ verwenden.",
     },
     "mflow1": {
         "en": "Current soft water flow. Only up to date in live mode or while a poll happens during water usage.",
@@ -138,9 +138,13 @@ DESCRIPTIONS: dict[str, dict[str, str]] = {
         "en": "Salt used yesterday according to the cloud. 0 on days without regeneration.",
         "de": "Salzverbrauch von gestern laut Cloud. An Tagen ohne Regeneration 0.",
     },
-    "salt_daily_sum": {
-        "en": "Sum of all daily salt values the cloud returns. Covers only the days listed in the attributes.",
-        "de": "Summe aller Tageswerte für Salz, die die Cloud liefert. Umfasst nur die in den Attributen genannten Tage.",
+    "salt_total": {
+        "en": "Running total of salt, adds up the daily cloud values (completed days only, so it counts a day late). Suitable for statistics and the energy dashboard.",
+        "de": "Fortlaufender Salzverbrauch, zählt die Tageswerte der Cloud zusammen (nur abgeschlossene Tage, also einen Tag später). Geeignet für Statistiken und das Energie-Dashboard.",
+    },
+    "lime_total": {
+        "en": "Running total of the lime the softener kept out of the water, adds up the daily cloud values (completed days only, so it counts a day late).",
+        "de": "Fortlaufende Summe des Kalks, den die Anlage aus dem Wasser zurückgehalten hat, zählt die Tageswerte der Cloud zusammen (nur abgeschlossene Tage, also einen Tag später).",
     },
     "calculated_water_consumption": {
         "en": "Running total of soft water, calculated from the decreasing remaining capacity. Suitable for the energy dashboard. Does not include blended raw water.",
@@ -157,6 +161,10 @@ DESCRIPTIONS: dict[str, dict[str, str]] = {
     "has_error": {
         "en": "On if the device reports an error. While an error is pending, the device stops sending new data.",
         "de": "An, wenn die Anlage einen Fehler meldet. Solange ein Fehler ansteht, sendet die Anlage keine neuen Daten.",
+    },
+    "no_data_change": {
+        "en": "On if polls succeed but no device value has changed for 24 hours. Either no water was used (e.g. everyone away) or the cloud stopped delivering data (error on the device display, cloud rate limiting).",
+        "de": "An, wenn die Abfragen funktionieren, sich aber seit 24 Stunden kein Wert der Anlage geändert hat. Entweder wurde kein Wasser verbraucht (z. B. alle verreist) oder die Cloud liefert keine Daten mehr (Fehler am Gerätedisplay, Abfragebegrenzung der Cloud).",
     },
     "salt_warning": {
         "en": "On if the salt supply needs attention.",

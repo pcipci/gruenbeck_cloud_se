@@ -186,7 +186,7 @@
         }
       },
       "msaltusage": {
-        "name": "Salt usage",
+        "name": "Salt counter of the unit (whole kg)",
         "state_attributes": {
           "description": {
             "name": "Description"
@@ -1095,41 +1095,6 @@
           }
         }
       },
-      "salt_daily_sum": {
-        "name": "Salt usage sum of daily values",
-        "state_attributes": {
-          "description": {
-            "name": "Description"
-          },
-          "daily": {
-            "name": "Daily values"
-          },
-          "errors": {
-            "name": "Errors"
-          },
-          "consumed_liters": {
-            "name": "Consumed since last poll (L)"
-          },
-          "raw_value": {
-            "name": "Raw value"
-          },
-          "days": {
-            "name": "Days"
-          },
-          "first_day": {
-            "name": "First day"
-          },
-          "regeneration_count": {
-            "name": "Regeneration count"
-          },
-          "history": {
-            "name": "History"
-          },
-          "changes": {
-            "name": "Changes"
-          }
-        }
-      },
       "calculated_water_consumption": {
         "name": "Calculated water consumption",
         "state_attributes": {
@@ -1698,6 +1663,82 @@
             "name": "Changes"
           }
         }
+      },
+      "salt_total": {
+        "name": "Salt usage total",
+        "state_attributes": {
+          "description": {
+            "name": "Description"
+          },
+          "daily": {
+            "name": "Daily values"
+          },
+          "errors": {
+            "name": "Errors"
+          },
+          "consumed_liters": {
+            "name": "Consumed since last poll (L)"
+          },
+          "raw_value": {
+            "name": "Raw value"
+          },
+          "days": {
+            "name": "Days"
+          },
+          "first_day": {
+            "name": "First day"
+          },
+          "regeneration_count": {
+            "name": "Regeneration count"
+          },
+          "history": {
+            "name": "History"
+          },
+          "changes": {
+            "name": "Changes"
+          },
+          "last_day": {
+            "name": "Last counted day"
+          }
+        }
+      },
+      "lime_total": {
+        "name": "Lime retained total",
+        "state_attributes": {
+          "description": {
+            "name": "Description"
+          },
+          "daily": {
+            "name": "Daily values"
+          },
+          "errors": {
+            "name": "Errors"
+          },
+          "consumed_liters": {
+            "name": "Consumed since last poll (L)"
+          },
+          "raw_value": {
+            "name": "Raw value"
+          },
+          "days": {
+            "name": "Days"
+          },
+          "first_day": {
+            "name": "First day"
+          },
+          "regeneration_count": {
+            "name": "Regeneration count"
+          },
+          "history": {
+            "name": "History"
+          },
+          "changes": {
+            "name": "Changes"
+          },
+          "last_day": {
+            "name": "Last counted day"
+          }
+        }
       }
     },
     "binary_sensor": {
@@ -1803,6 +1844,44 @@
           },
           "changes": {
             "name": "Changes"
+          }
+        }
+      },
+      "no_data_change": {
+        "name": "No data change",
+        "state_attributes": {
+          "description": {
+            "name": "Description"
+          },
+          "daily": {
+            "name": "Daily values"
+          },
+          "errors": {
+            "name": "Errors"
+          },
+          "consumed_liters": {
+            "name": "Consumed since last poll (L)"
+          },
+          "raw_value": {
+            "name": "Raw value"
+          },
+          "days": {
+            "name": "Days"
+          },
+          "first_day": {
+            "name": "First day"
+          },
+          "regeneration_count": {
+            "name": "Regeneration count"
+          },
+          "history": {
+            "name": "History"
+          },
+          "changes": {
+            "name": "Changes"
+          },
+          "since": {
+            "name": "Since"
           }
         }
       }
@@ -2309,20 +2388,6 @@
   "exceptions": {
     "command_failed": {
       "message": "Grünbeck cloud command failed: {error}"
-    }
-  },
-  "device": {
-    "consumption": {
-      "name": "Grünbeck consumption"
-    },
-    "settings": {
-      "name": "Grünbeck settings"
-    },
-    "daily": {
-      "name": "Grünbeck daily values (cloud)"
-    },
-    "maintenance": {
-      "name": "Grünbeck maintenance"
     }
   }
 }

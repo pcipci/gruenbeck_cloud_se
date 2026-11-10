@@ -47,10 +47,15 @@ class GruenbeckServiceDoneButton(GruenbeckEntity, ButtonEntity):
         return True
 
     async def async_press(self) -> None:
-        """Store today as last service date."""
-        await self.coordinator.async_set_service_date(
-            self._kind, dt_util.now().date()
-        )
+        """Store today as last service date.
+
+        A maintenance includes the inspection, so it also resets the
+        inspection; an inspection alone leaves the maintenance as it is.
+        """
+        today = dt_util.now().date()
+        await self.coordinator.async_set_service_date(self._kind, today)
+        if self._kind == "maintenance":
+            await self.coordinator.async_set_service_date("inspection", today)
 
 
 class GruenbeckRefreshSettingsButton(GruenbeckEntity, ButtonEntity):

@@ -28,7 +28,9 @@ The integration monitors the softener at a cloud-safe interval and adds what the
 * **Calculated water consumption** for the Energy dashboard, derived from the remaining capacity.
 * **Regeneration history**: time of the last regeneration and the last 20 regenerations with the remaining capacity before each one. The cloud does not provide this, so it is recorded by Home Assistant.
 * **Maintenance and inspection tracking**: next due date from the intervals configured in the device, editable date of the last service and "done" buttons.
-* **Frozen data detection**: a timestamp of the last change in the telemetry.
+* **Salt and lime totals**: running totals of the salt used and the lime retained (`kg`), counted from the daily cloud values and kept when the cloud drops old days.
+* **Salt refill detection**: remembers when the salt warning went away, i.e. when salt was refilled.
+* **Frozen data detection**: a timestamp of the last change in the telemetry and a binary sensor that turns on when nothing has changed for a long time.
 * **Setting change log**: records which cloud parameter changed, e.g. after changing an option in the app.
 * **Descriptions**: every entity has a `description` attribute explaining what it shows, in the language of Home Assistant.
 * **Diagnostics download** with the raw cloud responses (credentials and serial numbers redacted).
@@ -50,7 +52,7 @@ The model is detected from the series and type reported by the cloud and shown o
 
 ## Entities
 
-Entities are grouped into the main device and four sub-devices, linked via "Connected via" on the device page.
+Entities are grouped into the main device and four sub-devices, linked via "Connected via" on the device page. The devices are named after the model, e.g. *SE21 Plant*, *SE21 Consumption*, *SE21 Daily values (cloud)*, *SE21 Maintenance* and *SE21 Settings*.
 
 ### Main device
 
@@ -70,8 +72,9 @@ Entities are grouped into the main device and four sub-devices, linked via "Conn
 | `sensor` | Last poll | Time of the last successful poll of the telemetry (diagnostic) |
 | `sensor` | Data last changed | Time of the last change in the telemetry (diagnostic) |
 | `sensor` | Changed settings | Time of the last changed setting, attribute `changes` with the last changes (diagnostic) |
-| `binary_sensor` | Device error | On if the device reports an error |
-| `binary_sensor` | Salt warning | On if the salt supply is low (not on the SE18) |
+| `binary_sensor` | Device error | On if the device reports an error. Attribute `last_error`: message and time of the newest open error |
+| `binary_sensor` | Salt warning | On if the salt supply is low (not on the SE18). Attribute `refills`: times when the warning went away (salt refilled), last 20 |
+| `binary_sensor` | No data change | On if the telemetry has not changed for a long time, e.g. because the cloud stopped forwarding. Attribute `since` |
 | `binary_sensor` | Regeneration running | On while a regeneration step is active |
 | `switch` | Live mode (5 min) | Poll every 30 s for 5 minutes |
 | `button` | Fetch settings now | Read device information and settings immediately (does not wake the device) |
@@ -86,7 +89,9 @@ On devices with two exchangers (not the softliQ SE) the main device also has *Re
 | `sensor` | Average flow rate (last interval) | Average flow between the last two polls (`L/min`) |
 | `sensor` | Water volume 0 °dH | Soft water meter of the device (`m³`, whole m³) |
 | `sensor` | Make-up water | Water used to refill the brine tank (`L`) |
-| `sensor` | Salt usage | Total salt usage reported by the device (`kg`). Stays at 0 on some SE devices, use *Salt usage sum of daily values* instead |
+| `sensor` | Salt usage total | Running total in `kg`, counted from the daily values (`total_increasing`, usable for statistics and utility meters) |
+| `sensor` | Lime retained total | Running total of the lime the softener kept out of the water (`kg`) |
+| `sensor` | Salt counter of the unit (whole kg) | Counter reported by the device. Only changes in whole kilograms, use *Salt usage total* for statistics |
 
 ### Daily values
 
@@ -95,7 +100,6 @@ On devices with two exchangers (not the softliQ SE) the main device also has *Re
 | `sensor` | Water usage yesterday | `L`; attribute `daily` with the last 14 days |
 | `sensor` | Lime retained yesterday | `g` |
 | `sensor` | Salt usage yesterday | `g` |
-| `sensor` | Salt usage sum of daily values | `kg`, sum of all daily values the cloud returns |
 
 The cloud only provides completed days, so there is no value for today.
 
@@ -104,9 +108,9 @@ The cloud only provides completed days, so there is no value for today.
 | Platform | Entity | Description |
 |---|---|---|
 | `date` | Last maintenance, Last inspection | Stored in Home Assistant (the cloud does not know them). Default: start-up date |
-| `button` | Maintenance done, Inspection done | Set the date to today |
+| `button` | Maintenance done, Inspection done | Set the date to today. A maintenance includes the inspection, so *Maintenance done* resets both |
 | `sensor` | Next maintenance, Next inspection | Last date plus the interval configured in the device |
-| `sensor` | Days until maintenance, Days until inspection | Negative when overdue |
+| `sensor` | Days until maintenance, Days until inspection | Negative when overdue (device class duration) |
 | `sensor` | Maintenance interval | From the device (`d`) |
 
 ### Settings
@@ -156,6 +160,10 @@ Copy `custom_components/gruenbeck_cloud_se/` into `config/custom_components/` an
 3. Select your softener.
 
 Via **Configure** on the integration card you can change the password and the polling interval at any time.
+
+### Upgrading from 0.2.0
+
+The devices are now named after the model (*SE21 Plant* instead of *Grünbeck SoftliQ SE*). Entity IDs of existing entities do not change; use **Recreate entity IDs** on the device page if you want them to follow the new names. *Salt usage sum of daily values* is removed, *Salt usage total* replaces it.
 
 ### Upgrading from 0.1.x
 

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+* Sensors *Salt usage total* and *Lime retained total*: running totals in `kg`, counted from the daily cloud values. Counted days are remembered for 400 days, so the totals survive when the cloud drops old days.
+* Binary sensor *No data change*: on when the telemetry has not changed for a long time (attribute `since`).
+* Salt refill detection: the times when the salt warning went away are stored (attribute `refills` of *Salt warning*, last 20).
+* Attribute `last_error` on *Device error* with message and time of the newest open error.
+* Regeneration steps: *Last regeneration* records the phases seen during a regeneration.
+* `coordinator.daily_values(kind)`: one accessor for the daily water, salt and lime values.
+
+### Changed
+* Devices are named after the model without the brand prefix, e.g. *SE21 Plant*, *SE21 Settings* (was *Grünbeck SoftliQ SE*, *Grünbeck Settings*). Existing entity IDs are kept.
+* *Maintenance done* also resets the inspection, because a maintenance includes it.
+* *Salt usage* is now called *Salt counter of the unit (whole kg)*, to tell it apart from the new total.
+* *Days until maintenance* and *Days until inspection* have the device class duration.
+
+### Removed
+* *Salt usage sum of daily values*: it was no daily value and is replaced by *Salt usage total*. The entity is removed from the registry on startup.
+
 ## 0.2.0
 
 ### Added

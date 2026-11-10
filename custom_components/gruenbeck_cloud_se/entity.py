@@ -9,12 +9,15 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import GruenbeckDataUpdateCoordinator
 from .descriptions import get_description
+from .models import device_name
 
 # Entities are grouped into sub-devices, everything else stays on the main
 # device ("operation").
 ENTITY_GROUPS = {
     "consumption": {
         "calculated_water_consumption",
+        "salt_total",
+        "lime_total",
         "average_flow_rate",
         "msaltusage",
         "mcountwater1",
@@ -25,7 +28,6 @@ ENTITY_GROUPS = {
         "water_yesterday",
         "lime_retained_yesterday",
         "salt_yesterday",
-        "salt_daily_sum",
     },
     "maintenance": {
         "last_maintenance",
@@ -81,7 +83,9 @@ class GruenbeckEntity(CoordinatorEntity[GruenbeckDataUpdateCoordinator]):
         if group is not None:
             self._attr_device_info = DeviceInfo(
                 identifiers={(DOMAIN, f"{coordinator.device_id}_{group}")},
-                translation_key=group,
+                name=device_name(
+                    coordinator.features, group, coordinator.hass.config.language
+                ),
                 manufacturer="Grünbeck",
             )
             return
@@ -90,7 +94,9 @@ class GruenbeckEntity(CoordinatorEntity[GruenbeckDataUpdateCoordinator]):
         info = (coordinator.data or {}).get("_info") or {}
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.device_id)},
-            name="Grünbeck SoftliQ SE",
+            name=device_name(
+                coordinator.features, "plant", coordinator.hass.config.language
+            ),
             manufacturer="Grünbeck",
             model=coordinator.features.model,
             sw_version=info.get("swVersion"),

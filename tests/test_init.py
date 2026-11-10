@@ -11,23 +11,23 @@ async def test_setup_creates_entities(hass, setup_integration):
     """All main entities are created with English names."""
     await setup_integration()
 
-    assert hass.states.get("sensor.grunbeck_softliq_se_remaining_capacity").state == "300.0"
-    assert hass.states.get("sensor.grunbeck_softliq_se_regeneration_phase").state == "inactive"
-    assert hass.states.get("sensor.grunbeck_softliq_se_last_error").state == "OK"
-    assert hass.states.get("sensor.grunbeck_consumption_make_up_water").attributes[
+    assert hass.states.get("sensor.se21_plant_remaining_capacity").state == "300.0"
+    assert hass.states.get("sensor.se21_plant_regeneration_phase").state == "inactive"
+    assert hass.states.get("sensor.se21_plant_last_error").state == "OK"
+    assert hass.states.get("sensor.se21_consumption_make_up_water").attributes[
         "unit_of_measurement"
     ] == "L"
-    assert hass.states.get("switch.grunbeck_settings_iq_mode").state == "on"
-    assert hass.states.get("switch.grunbeck_settings_signal_on_failure").state == "on"
+    assert hass.states.get("switch.se21_settings_iq_mode").state == "on"
+    assert hass.states.get("switch.se21_settings_signal_on_failure").state == "on"
     # Each entity explains itself
-    assert hass.states.get("sensor.grunbeck_softliq_se_flow_rate").attributes["description"]
+    assert hass.states.get("sensor.se21_plant_flow_rate").attributes["description"]
 
 
 async def test_german_names(hass, setup_integration):
     """Names follow the language of Home Assistant."""
     await setup_integration("de")
-    state = hass.states.get("sensor.grunbeck_softliq_se_restkapazitat")
-    assert state.attributes["friendly_name"] == "Grünbeck SoftliQ SE Restkapazität"
+    state = hass.states.get("sensor.se21_anlage_restkapazitat")
+    assert state.attributes["friendly_name"] == "SE21 Anlage Restkapazität"
     assert state.attributes["description"].startswith("Weichwassermenge")
 
 
@@ -102,10 +102,10 @@ async def test_iq_mode_switch(hass, setup_integration, cloud):
     """iQ-Mode off means fixed regeneration times (pregmode true)."""
     await setup_integration()
     await hass.services.async_call(
-        "switch", "turn_off", {"entity_id": "switch.grunbeck_settings_iq_mode"}, blocking=True
+        "switch", "turn_off", {"entity_id": "switch.se21_settings_iq_mode"}, blocking=True
     )
     assert cloud.calls[-1] == ("PATCH", "/parameters", {"pregmode": True})
-    assert hass.states.get("switch.grunbeck_settings_iq_mode").state == "off"
+    assert hass.states.get("switch.se21_settings_iq_mode").state == "off"
 
 
 @pytest.mark.parametrize(
@@ -126,7 +126,7 @@ async def test_led_ring_switches(
     cloud_data["parameters"]["pled"] = start
     await setup_integration()
     await hass.services.async_call(
-        "switch", action, {"entity_id": f"switch.grunbeck_settings_led_ring_{switch}"}, blocking=True
+        "switch", action, {"entity_id": f"switch.se21_settings_led_ring_{switch}"}, blocking=True
     )
     assert cloud.calls[-1] == ("PATCH", "/parameters", {"pled": expected})
 
@@ -136,12 +136,12 @@ async def test_setting_changes_are_logged(hass, setup_integration, cloud_data):
     await setup_integration()
     cloud_data["parameters"]["pled"] = 2
     await hass.services.async_call(
-        "button", "press", {"entity_id": "button.grunbeck_softliq_se_fetch_settings_now"}, blocking=True
+        "button", "press", {"entity_id": "button.se21_plant_fetch_settings_now"}, blocking=True
     )
     await hass.async_block_till_done()
-    state = hass.states.get("sensor.grunbeck_softliq_se_changed_settings")
+    state = hass.states.get("sensor.se21_plant_changed_settings")
     assert state.attributes["changes"][0].endswith("pled: 8 → 2")
-    assert hass.states.get("switch.grunbeck_settings_led_ring_on_message").state == "off"
+    assert hass.states.get("switch.se21_settings_led_ring_on_message").state == "off"
 
 
 async def test_unload(hass, setup_integration):

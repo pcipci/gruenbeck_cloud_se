@@ -42,6 +42,7 @@ EXTRA_ENDPOINTS = {
 WATCHED_CHANGE_SOURCES = ("_info", "_parameters")
 IGNORED_SETTING_KEYS = {"pdate", "regMo1", "$pending"}
 MAX_SETTING_CHANGES = 50
+SALT_REFILL_HISTORY_SIZE = 20
 
 
 class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -57,6 +58,10 @@ class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Initialize the coordinator."""
         self.api = api
         self.device_id = device_id
+        # Daily salt values counted by the salt total sensor (ISO date -> g)
+        self.salt_days: dict[str, float] = {}
+        # Daily retained lime counted by the lime total sensor (ISO date -> g)
+        self.lime_days: dict[str, float] = {}
 
         # Cached results of the plain cloud endpoints
         self.extra_data: dict[str, Any] = {}
@@ -79,6 +84,12 @@ class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         }
         self._service_store: Store = Store(
             hass, 1, f"{DOMAIN}_{device_id}_service_dates"
+        )
+
+        # Times when salt was refilled, detected when the salt warning goes away
+        self.salt_refills: list[str] = []
+        self._refills_store: Store = Store(
+            hass, 1, f"{DOMAIN}_{device_id}_salt_refills"
         )
 
         # Log of changed settings, e.g. to find out which parameter an app
@@ -422,6 +433,46 @@ class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self.service_dates[kind] = date.fromisoformat(stored[kind])
             except (KeyError, TypeError, ValueError):
                 self.service_dates[kind] = None
+
+    def daily_values(self, kind: str) -> list[dict[str, Any]] | None:
+        """Return the daily values for the dashboard card.
+
+        kind is "water" (litres), "salt" (grams) or "lime" (grams retained).
+        Each entry is {"date": "YYYY-MM-DD", "value": number}. Salt and lime
+        also contain the days the total sensors remember, because the cloud
+        only keeps a limited history. None if there is nothing.
+        """
+        data = self.data or {}
+        if kind == "water":
+            entries = data.get("_water")
+            return entries if isinstance(entries, list) else None
+        if kind == "salt":
+            remembered, source, field = self.salt_days, "_salt", "value"
+        else:
+            remembered, source, field = self.lime_days, "_water", "limeRetained"
+        days = dict(remembered)
+        for entry in data.get(source) or []:
+            if isinstance(entry, dict) and entry.get("date"):
+                days.setdefault(str(entry["date"])[:10], entry.get(field))
+        if not days:
+            return None
+        return [{"date": day, "value": value} for day, value in days.items()]
+
+    async def async_load_salt_refills(self) -> None:
+        """Load the stored salt refill times."""
+        stored = await self._refills_store.async_load() or {}
+        refills = stored.get("refills")
+        self.salt_refills = [str(r) for r in refills] if isinstance(refills, list) else []
+
+    def record_salt_refill(self, when: datetime | None = None) -> None:
+        """Remember a salt refill (now unless a time is given)."""
+        when = when or dt_util.now()
+        self.salt_refills.append(when.isoformat(timespec="minutes"))
+        self.salt_refills = self.salt_refills[-SALT_REFILL_HISTORY_SIZE:]
+        self.hass.async_create_task(
+            self._refills_store.async_save({"refills": self.salt_refills})
+        )
+        self.async_update_listeners()
 
     async def async_set_service_date(self, kind: str, value: date) -> None:
         """Store the date of the last maintenance or inspection."""

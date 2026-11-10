@@ -29,6 +29,11 @@ class DeviceFeatures:
     salt_sensor: bool
     led_ring: bool
 
+    @property
+    def short_model(self) -> str:
+        """Model without the brand prefix, e.g. SE21."""
+        return self.model.replace("softliQ", "").strip() or self.model
+
 
 def device_features(data: dict[str, Any] | None) -> DeviceFeatures:
     """Return the features for the cloud data of a device."""
@@ -54,3 +59,20 @@ def device_features(data: dict[str, Any] | None) -> DeviceFeatures:
         salt_sensor=not (is_se and device_type in SE_TYPES_WITHOUT_SALT_SENSOR),
         led_ring=not (is_se and device_type in SE_TYPES_WITHOUT_LED_RING),
     )
+
+
+# Names of the devices, without brand prefix: "<model> <label>"
+DEVICE_LABELS = {
+    "plant": {"en": "Plant", "de": "Anlage"},
+    "consumption": {"en": "Consumption", "de": "Verbrauch"},
+    "settings": {"en": "Settings", "de": "Einstellungen"},
+    "daily": {"en": "Daily values (cloud)", "de": "Tageswerte (Cloud)"},
+    "maintenance": {"en": "Maintenance", "de": "Wartung"},
+}
+
+
+def device_name(features: DeviceFeatures, group: str, language: str | None) -> str:
+    """Return the device name, e.g. "SE21 Einstellungen"."""
+    labels = DEVICE_LABELS[group]
+    label = labels.get((language or "en")[:2], labels["en"])
+    return f"{features.short_model} {label}"

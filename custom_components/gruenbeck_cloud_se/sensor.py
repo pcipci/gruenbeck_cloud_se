@@ -408,20 +408,6 @@ CLOUD_SENSOR_TYPES: dict[str, dict[str, Any]] = {
         "value_fn": lambda d: _yesterday_value(d.get("_salt")),
         "attributes_fn": lambda d: {"daily": _recent_entries(d.get("_salt"))},
     },
-    "salt_daily_sum": {
-        "name": "Salt Usage Sum of Daily Values (Cloud)",
-        "source": "_salt",
-        "unit": "kg",
-        "device_class": SensorDeviceClass.WEIGHT,
-        "value_fn": lambda d: _sum_values(d.get("_salt"), 0.001),
-        "attributes_fn": lambda d: {
-            "days": len(d.get("_salt") or []),
-            "first_day": min(
-                (str(e.get("date"))[:10] for e in d.get("_salt") or [] if isinstance(e, dict)),
-                default=None,
-            ),
-        },
-    },
 }
 
 
@@ -486,6 +472,9 @@ async def async_setup_entry(
 
     # Add the special calculated water consumption sensor
     entities.append(GruenbeckCalculatedWaterConsumptionSensor(coordinator))
+    entities.append(GruenbeckSaltTotalSensor(coordinator))
+    if coordinator.data.get("_water") is not None:
+        entities.append(GruenbeckLimeTotalSensor(coordinator))
     entities.append(GruenbeckAverageFlowSensor(coordinator))
     entities.append(GruenbeckDataLastChangedSensor(coordinator))
     entities.append(GruenbeckLastPollSensor(coordinator))
@@ -670,6 +659,127 @@ class GruenbeckCalculatedWaterConsumptionSensor(
             self.hass.async_create_task(self._store.async_save({"state": self._state}))
 
 
+class GruenbeckDailyTotalSensor(GruenbeckEntity, SensorEntity):
+    """Running total in kg, from daily gram values of the cloud.
+
+    The cloud only returns completed days and drops old ones, so every day
+    is counted once and remembered. A day whose value grows later is
+    counted with the difference. The remembered days are also available
+    through coordinator.daily_values(), e.g. for charts.
+    """
+
+    # Entity key, cloud list, field of a daily entry, coordinator attribute
+    KEY = ""
+    SOURCE = ""
+    FIELD = "value"
+    DAYS_ATTR = ""
+
+    _attr_device_class = SensorDeviceClass.WEIGHT
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = "kg"
+    _attr_suggested_display_precision = 2
+    # The daily values are kept in the store, not in the history
+    _unrecorded_attributes = frozenset({"description", "last_day"})
+
+    # Days are kept a bit longer than a year
+    KEEP_DAYS = 400
+
+    def __init__(self, coordinator: GruenbeckDataUpdateCoordinator) -> None:
+        """Initialize the total sensor."""
+        super().__init__(coordinator, self.KEY)
+        self._total: float = 0.0  # grams
+        self._days: dict[str, float] = {}  # ISO date -> grams
+        self._store: Store | None = None
+        self._loaded = False
+
+    async def async_added_to_hass(self) -> None:
+        """Load the counted days and pick up the current cloud values."""
+        await super().async_added_to_hass()
+        self._store = Store(
+            self.hass, 1, f"{DOMAIN}_{self.coordinator.device_id}_{self.KEY}"
+        )
+        stored = await self._store.async_load() or {}
+        try:
+            self._total = float(stored.get("total") or 0)
+        except (TypeError, ValueError):
+            self._total = 0.0
+        days = stored.get("days")
+        self._days = dict(days) if isinstance(days, dict) else {}
+        self._loaded = True
+        setattr(self.coordinator, self.DAYS_ATTR, self._days)
+        self._count_new_days()
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the total in kg."""
+        if not self._loaded:
+            return None
+        return round(self._total / 1000, 3)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the description and the last counted day."""
+        attributes = dict(super().extra_state_attributes or {})
+        if self._days:
+            attributes["last_day"] = max(self._days)
+        return attributes or None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Count new daily values."""
+        if self._loaded:
+            self._count_new_days()
+        super()._handle_coordinator_update()
+
+    def _count_new_days(self) -> None:
+        """Add days not counted yet, and growth of days already counted."""
+        entries = (self.coordinator.data or {}).get(self.SOURCE)
+        if not isinstance(entries, list):
+            return
+        changed = False
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            day = str(entry.get("date") or "")[:10]
+            try:
+                date.fromisoformat(day)
+                value = float(entry.get(self.FIELD) or 0)
+            except (TypeError, ValueError):
+                continue
+            counted = self._days.get(day)
+            if counted is None or value > counted:
+                self._total += value - (counted or 0)
+                self._days[day] = value
+                changed = True
+        if not changed:
+            return
+        oldest = (dt_util.now().date() - timedelta(days=self.KEEP_DAYS)).isoformat()
+        for day in [d for d in self._days if d < oldest]:
+            del self._days[day]
+        if self._store is not None:
+            self.hass.async_create_task(
+                self._store.async_save({"total": self._total, "days": self._days})
+            )
+
+
+class GruenbeckSaltTotalSensor(GruenbeckDailyTotalSensor):
+    """Running total of salt."""
+
+    KEY = "salt_total"
+    SOURCE = "_salt"
+    DAYS_ATTR = "salt_days"
+
+
+class GruenbeckLimeTotalSensor(GruenbeckDailyTotalSensor):
+    """Running total of the lime the softener retained."""
+
+    KEY = "lime_total"
+    SOURCE = "_water"
+    FIELD = "limeRetained"
+    DAYS_ATTR = "lime_days"
+
+
 class GruenbeckAverageFlowSensor(GruenbeckEntity, SensorEntity):
     """Average soft water flow between two polls, from capacity decreases."""
 
@@ -830,6 +940,9 @@ class GruenbeckLastRegenerationSensor(GruenbeckEntity, RestoreEntity, SensorEnti
         # Capacity seen at the last poll without regeneration
         self._last_capacity: tuple[Any, Any] | None = None
         self._history: list[dict[str, Any]] = []
+        # Phases seen during the running regeneration: {"time", "phase"}
+        self._steps: list[dict[str, Any]] = []
+        self._was_regenerating = False
 
     async def async_added_to_hass(self) -> None:
         """Restore the previous value and counter."""
@@ -862,6 +975,7 @@ class GruenbeckLastRegenerationSensor(GruenbeckEntity, RestoreEntity, SensorEnti
     def _check_counter(self) -> None:
         """Record time and capacity when the regeneration counter increases."""
         data = self.coordinator.data or {}
+        self._track_steps(data)
         try:
             count = int(data.get("mcountreg"))
         except (TypeError, ValueError):
@@ -869,13 +983,16 @@ class GruenbeckLastRegenerationSensor(GruenbeckEntity, RestoreEntity, SensorEnti
         if self._last_count is not None and count > self._last_count:
             self._value = dt_util.now()
             percent, liters = self._last_capacity or (None, None)
-            self._history.append(
-                {
-                    "time": self._value.isoformat(timespec="minutes"),
-                    "capacity_percent": percent,
-                    "capacity_liters": liters,
-                }
-            )
+            entry = {
+                "time": self._value.isoformat(timespec="minutes"),
+                "capacity_percent": percent,
+                "capacity_liters": liters,
+            }
+            # The phases the unit went through, as far as the polls saw them
+            if self._steps:
+                entry["steps"] = self._steps
+                self._steps = []
+            self._history.append(entry)
             self._history = self._history[-REGENERATION_HISTORY_SIZE:]
         self._last_count = count
 
@@ -887,6 +1004,25 @@ class GruenbeckLastRegenerationSensor(GruenbeckEntity, RestoreEntity, SensorEnti
             return
         if not regenerating and liters > 0:
             self._last_capacity = (data.get("mresidcap1"), liters)
+
+    def _track_steps(self, data: dict[str, Any]) -> None:
+        """Remember each regeneration phase with the time it was first seen."""
+        try:
+            code = int(data.get("mregstatus") or 0)
+        except (TypeError, ValueError):
+            return
+        if code == 0:
+            self._was_regenerating = False
+            return
+        if not self._was_regenerating:
+            # A new regeneration begins
+            self._steps = []
+            self._was_regenerating = True
+        phase = REGENERATION_STEPS.get(code, "other")
+        if not self._steps or self._steps[-1]["phase"] != phase:
+            self._steps.append(
+                {"time": dt_util.now().isoformat(timespec="minutes"), "phase": phase}
+            )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -915,6 +1051,7 @@ class GruenbeckServiceDaysSensor(GruenbeckEntity, SensorEntity):
     """Days until the next maintenance or inspection, negative if overdue."""
 
     _attr_native_unit_of_measurement = "d"
+    _attr_device_class = SensorDeviceClass.DURATION
     _attr_icon = "mdi:calendar-clock"
 
     def __init__(self, coordinator: GruenbeckDataUpdateCoordinator, kind: str) -> None:
