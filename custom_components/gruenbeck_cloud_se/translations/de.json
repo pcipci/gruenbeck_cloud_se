@@ -1664,6 +1664,44 @@
           }
         }
       },
+      "water_total": {
+        "name": "Wasserverbrauch gesamt (Tageswerte)",
+        "state_attributes": {
+          "description": {
+            "name": "Beschreibung"
+          },
+          "daily": {
+            "name": "Tageswerte"
+          },
+          "errors": {
+            "name": "Fehler"
+          },
+          "consumed_liters": {
+            "name": "Verbrauch seit letzter Abfrage (L)"
+          },
+          "raw_value": {
+            "name": "Rohwert"
+          },
+          "days": {
+            "name": "Tage"
+          },
+          "first_day": {
+            "name": "Erster Tag"
+          },
+          "regeneration_count": {
+            "name": "Regenerationszähler"
+          },
+          "history": {
+            "name": "Verlauf"
+          },
+          "changes": {
+            "name": "Änderungen"
+          },
+          "last_day": {
+            "name": "Letzter gezählter Tag"
+          }
+        }
+      },
       "salt_total": {
         "name": "Salzverbrauch gesamt",
         "state_attributes": {

@@ -1664,6 +1664,44 @@
           }
         }
       },
+      "water_total": {
+        "name": "Water usage total",
+        "state_attributes": {
+          "description": {
+            "name": "Description"
+          },
+          "daily": {
+            "name": "Daily values"
+          },
+          "errors": {
+            "name": "Errors"
+          },
+          "consumed_liters": {
+            "name": "Consumed since last poll (L)"
+          },
+          "raw_value": {
+            "name": "Raw value"
+          },
+          "days": {
+            "name": "Days"
+          },
+          "first_day": {
+            "name": "First day"
+          },
+          "regeneration_count": {
+            "name": "Regeneration count"
+          },
+          "history": {
+            "name": "History"
+          },
+          "changes": {
+            "name": "Changes"
+          },
+          "last_day": {
+            "name": "Last counted day"
+          }
+        }
+      },
       "salt_total": {
         "name": "Salt usage total",
         "state_attributes": {

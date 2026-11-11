@@ -66,3 +66,34 @@ def test_lime_total():
         d(2): 37.5,
         d(1): 32.5,
     }
+
+
+def test_totals_unknown_until_first_day():
+    s = make([])
+    s._count_new_days()
+    assert s.native_value is None
+    d = (date.today() - timedelta(days=1)).isoformat()
+    s.coordinator.data = {"_salt": [{"date": d, "value": 0}]}
+    s._count_new_days()
+    assert s._days and s.native_value == 0.0
+
+
+def test_water_total():
+    from custom_components.gruenbeck_cloud_se.sensor import GruenbeckWaterTotalSensor
+
+    d = lambda i: (date.today() - timedelta(days=i)).isoformat()
+    s = GruenbeckWaterTotalSensor.__new__(GruenbeckWaterTotalSensor)
+    s.coordinator = SimpleNamespace(
+        data={"_water": [{"date": d(2), "value": 141.4}, {"date": d(1), "value": 184}]},
+        water_days={},
+    )
+    s._total = 0.0
+    s._days = {}
+    s._store = None
+    s._loaded = True
+    assert s.native_value is None
+    s._count_new_days()
+    assert s.native_value == 325
+    s._count_new_days()
+    assert s.native_value == 325
+    assert s.native_unit_of_measurement == "L"

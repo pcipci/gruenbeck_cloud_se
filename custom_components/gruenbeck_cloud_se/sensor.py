@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import EntityCategory, UnitOfVolume
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -474,6 +474,7 @@ async def async_setup_entry(
     entities.append(GruenbeckCalculatedWaterConsumptionSensor(coordinator))
     entities.append(GruenbeckSaltTotalSensor(coordinator))
     if coordinator.data.get("_water") is not None:
+        entities.append(GruenbeckWaterTotalSensor(coordinator))
         entities.append(GruenbeckLimeTotalSensor(coordinator))
     entities.append(GruenbeckAverageFlowSensor(coordinator))
     entities.append(GruenbeckDataLastChangedSensor(coordinator))
@@ -712,8 +713,8 @@ class GruenbeckDailyTotalSensor(GruenbeckEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return the total in kg."""
-        if not self._loaded:
+        """Return the total in kg, unknown until a first daily value arrived."""
+        if not self._loaded or not self._days:
             return None
         return round(self._total / 1000, 3)
 
@@ -769,6 +770,28 @@ class GruenbeckSaltTotalSensor(GruenbeckDailyTotalSensor):
     KEY = "salt_total"
     SOURCE = "_salt"
     DAYS_ATTR = "salt_days"
+
+
+class GruenbeckWaterTotalSensor(GruenbeckDailyTotalSensor):
+    """Running total of water in litres, from the daily cloud values.
+
+    A cross-check for the calculated water consumption, one day late.
+    """
+
+    KEY = "water_total"
+    SOURCE = "_water"
+    DAYS_ATTR = "water_days"
+
+    _attr_device_class = SensorDeviceClass.WATER
+    _attr_native_unit_of_measurement = UnitOfVolume.LITERS
+    _attr_suggested_display_precision = 0
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the total in litres, unknown until a first daily value arrived."""
+        if not self._loaded or not self._days:
+            return None
+        return round(self._total)
 
 
 class GruenbeckLimeTotalSensor(GruenbeckDailyTotalSensor):

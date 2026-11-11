@@ -138,6 +138,10 @@ DESCRIPTIONS: dict[str, dict[str, str]] = {
         "en": "Salt used yesterday according to the cloud. 0 on days without regeneration.",
         "de": "Salzverbrauch von gestern laut Cloud. An Tagen ohne Regeneration 0.",
     },
+    "water_total": {
+        "en": "Running total of water, adds up the daily cloud values (completed days only, so it counts a day late). A cross-check for the calculated water consumption.",
+        "de": "Fortlaufender Wasserverbrauch, zählt die Tageswerte der Cloud zusammen (nur abgeschlossene Tage, also einen Tag später). Gegenprobe zum berechneten Wasserverbrauch.",
+    },
     "salt_total": {
         "en": "Running total of salt, adds up the daily cloud values (completed days only, so it counts a day late). Suitable for statistics and the energy dashboard.",
         "de": "Fortlaufender Salzverbrauch, zählt die Tageswerte der Cloud zusammen (nur abgeschlossene Tage, also einen Tag später). Geeignet für Statistiken und das Energie-Dashboard.",

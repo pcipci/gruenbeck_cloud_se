@@ -58,6 +58,8 @@ class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Initialize the coordinator."""
         self.api = api
         self.device_id = device_id
+        # Daily water values counted by the water total sensor (ISO date -> L)
+        self.water_days: dict[str, float] = {}
         # Daily salt values counted by the salt total sensor (ISO date -> g)
         self.salt_days: dict[str, float] = {}
         # Daily retained lime counted by the lime total sensor (ISO date -> g)

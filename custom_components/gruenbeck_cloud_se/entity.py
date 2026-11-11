@@ -16,6 +16,7 @@ from .models import device_name
 ENTITY_GROUPS = {
     "consumption": {
         "calculated_water_consumption",
+        "water_total",
         "salt_total",
         "lime_total",
         "average_flow_rate",
