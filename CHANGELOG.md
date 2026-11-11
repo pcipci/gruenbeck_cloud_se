@@ -13,6 +13,7 @@
 ### Changed
 * Devices are named after the model without the brand prefix, e.g. *SE21 Plant*, *SE21 Settings* (was *Grünbeck SoftliQ SE*, *Grünbeck Settings*). Existing entity IDs are kept.
 * *Maintenance done* also resets the inspection, because a maintenance includes it.
+* The date of the last maintenance or inspection cannot be set in the future.
 * *Salt usage* is now called *Salt counter of the unit (whole kg)*, to tell it apart from the new total.
 * *Days until maintenance* and *Days until inspection* have the device class duration.
 

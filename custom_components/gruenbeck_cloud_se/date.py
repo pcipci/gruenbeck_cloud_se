@@ -7,7 +7,9 @@ from homeassistant.components.date import DateEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import GruenbeckDataUpdateCoordinator
@@ -52,5 +54,11 @@ class GruenbeckLastServiceDate(GruenbeckEntity, DateEntity):
         return self.coordinator.last_service_date(self._kind)
 
     async def async_set_value(self, value: date) -> None:
-        """Change the last service date."""
+        """Change the last service date.
+
+        A service cannot have happened in the future; this also protects the
+        due dates against a slip of the finger.
+        """
+        if value > dt_util.now().date():
+            raise ServiceValidationError("The date of a service cannot be in the future")
         await self.coordinator.async_set_service_date(self._kind, value)
