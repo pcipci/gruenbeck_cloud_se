@@ -32,6 +32,8 @@ The integration monitors the softener at a cloud-safe interval and adds what the
 * **Salt refill detection**: remembers when the salt warning went away, i.e. when salt was refilled.
 * **Frozen data detection**: a timestamp of the last change in the telemetry and a binary sensor that turns on when nothing has changed for a long time.
 * **Setting change log**: records which cloud parameter changed, e.g. after changing an option in the app.
+* **Dashboard card** `custom:gruenbeck-card`: a picture of the softener with live state, statistics, charts and the controls. Registered automatically, no configuration needed. See [Dashboard card](#dashboard-card).
+* **Notifications**: an automation blueprint for errors, salt, maintenance, frozen data and more, installed with the integration. See [Notifications](#notifications).
 * **Descriptions**: every entity has a `description` attribute explaining what it shows, in the language of Home Assistant.
 * **Diagnostics download** with the raw cloud responses (credentials and serial numbers redacted).
 
@@ -128,6 +130,18 @@ Changed settings are first shown as pending by the cloud until the device has pi
 
 ---
 
+## Dashboard card
+
+<img src="images/card.png" alt="Dashboard card" width="420">
+
+Add a card of type `custom:gruenbeck-card` (card picker: **Grünbeck softener**). With one softener it needs no configuration. Tapping the parts of the picture opens charts, the salt usage since the last refill, the regeneration history and the maintenance and inspection windows. Options, screenshots and details: [docs/card.md](docs/card.md).
+
+## Notifications
+
+The integration installs the automation blueprint **Grünbeck softener notifications** (`blueprints/automation/gruenbeck_cloud_se/`). Create an automation from it under **Settings → Automations & scenes → Blueprints**. It can notify about device errors, salt warning, missing data, an unreachable cloud, maintenance and inspection, finished regenerations and long water flow, with optional repeats. Details: [docs/notifications.md](docs/notifications.md).
+
+---
+
 ## Polling and rate limits
 
 | Mode | Interval | Duration |
@@ -204,6 +218,15 @@ Tests run against recorded (anonymized) cloud responses of a softliQ SE21, witho
 ```bash
 pip install -r requirements_test.txt
 pytest
+```
+
+The dashboard card is built from the sources in `card/` (see [card/README.md](card/README.md)):
+
+```bash
+cd card
+npm install
+npm run check
+node build.mjs
 ```
 
 ---

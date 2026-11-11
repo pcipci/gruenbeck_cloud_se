@@ -1,0 +1,110 @@
+<!doctype html>
+<!--
+  Test page for the card: a fake Home Assistant ("hass") object with one
+  softener and invented values. Open it through compare.mjs, or serve this
+  folder and open mock.html?card=<url of a built card file> in a browser.
+-->
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>body { margin: 0; background: #eef1f5; font-family: sans-serif; } #stage { width: 420px; margin: 10px; }</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+const DAY = 86400000;
+const now = new Date();
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const ago = (days, minutes = 0) => new Date(now.getTime() - days * DAY - minutes * 60000).toISOString();
+
+// Invented daily values of the last 330 days: water (L), lime (g), salt (g)
+const days = { water: {}, salt: {}, lime: {} };
+for (let i = 1; i <= 330; i++) {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+  const litres = Math.round(180 + 120 * Math.abs(Math.sin(i * 1.7)) + (d.getDay() % 6 === 0 ? 80 : 0));
+  days.water[iso(d)] = litres;
+  days.lime[iso(d)] = Math.round((litres / 1000) * 14 * 17.8 * 0.9);
+  days.salt[iso(d)] = i % 3 === 0 ? Math.round(litres * 0.9) + 150 : Math.round(litres * 0.15);
+}
+
+// Entities: key used by the card -> entity id, and their states
+const entities = {};
+const states = {};
+const set = (domain, key, state, attributes = {}) => {
+  const id = `${domain}.softener_${key}`;
+  entities[key] = id;
+  states[id] = { entity_id: id, state: String(state), attributes, last_changed: now.toISOString() };
+};
+set("sensor", "mrescapa1", 640, { unit_of_measurement: "L" });
+set("sensor", "mresidcap1", 72, { unit_of_measurement: "%" });
+set("sensor", "mflow1", 0, { unit_of_measurement: "L/min" });
+set("sensor", "average_flow_rate", 4.2, { unit_of_measurement: "L/min" });
+set("sensor", "raw_water_hardness", 18, { unit_of_measurement: "°dH" });
+set("sensor", "soft_water_hardness", 4, { unit_of_measurement: "°dH" });
+set("sensor", "calculated_water_consumption", 412345, { unit_of_measurement: "L" });
+set("sensor", "salt_total", 48.31, { unit_of_measurement: "kg" });
+set("sensor", "lime_total", 23.9, { unit_of_measurement: "kg" });
+set("sensor", "mcountreg", 431);
+set("sensor", "last_poll", ago(0, 5));
+set("sensor", "data_last_changed", ago(0, 300));
+set("sensor", "next_inspection", iso(new Date(now.getTime() + 18 * DAY)));
+set("sensor", "inspection_days_remaining", 18);
+set("sensor", "last_inspection", iso(new Date(now.getTime() - 162 * DAY)));
+set("sensor", "next_maintenance", iso(new Date(now.getTime() + 212 * DAY)));
+set("sensor", "maintenance_days_remaining", 212);
+set("sensor", "last_maintenance", iso(new Date(now.getTime() - 153 * DAY)));
+set("button", "inspection_done", "unknown");
+set("button", "maintenance_done", "unknown");
+set("sensor", "last_regeneration", ago(2), {
+  history: [
+    { time: ago(9), capacity_percent: 12, capacity_liters: 800 },
+    { time: ago(2), capacity_percent: 9, capacity_liters: 640, steps: [
+      { time: ago(2, 62), phase: "fill_salt_tank" }, { time: ago(2, 48), phase: "salting" }, { time: ago(2, 30), phase: "displacement" },
+      { time: ago(2, 18), phase: "backwashing" }, { time: ago(2, 6), phase: "washing_out" } ] },
+  ],
+});
+set("binary_sensor", "salt_warning", "off", { refills: [ago(95), ago(50), ago(20)] });
+set("binary_sensor", "has_error", "off");
+set("binary_sensor", "no_data_change", "off");
+set("binary_sensor", "regeneration_running", "off");
+for (const [key, state] of [["iq_mode", "on"], ["buzzer", "on"], ["live_mode", "off"], ["track_regeneration", "on"],
+  ["led_ring_permanent", "off"], ["led_ring_failure", "off"], ["led_ring_message", "on"], ["led_ring_flow", "off"]]) set("switch", key, state);
+set("number", "led_brightness", 60, { min: 0, max: 100 });
+
+// The parts of the websocket API the card uses
+const callWS = async (msg) => {
+  if (msg.type === "gruenbeck_cloud_se/card_info") {
+    return [{ device_id: "device1", name: "softliQ SE21", entities, notifications: [], days }];
+  }
+  if (msg.type === "recorder/statistic_during_period") return { change: 1234 };
+  if (msg.type === "recorder/statistics_during_period") {
+    const id = msg.statistic_ids[0];
+    const start = new Date(msg.start_time).getTime();
+    const end = Math.min(new Date(msg.end_time || now).getTime(), now.getTime());
+    const step = msg.period === "hour" ? 3600000 : msg.period === "month" ? 30 * DAY : msg.period === "5minute" ? 300000 : DAY;
+    const out = [];
+    for (let t = start; t < end; t += step) {
+      const d = new Date(t);
+      const awake = d.getHours() > 6 && d.getHours() < 23;
+      out.push({ start: t, state: 412000, max: awake ? 6.5 : 0,
+        change: msg.period === "hour" ? (awake ? Math.round(10 + 15 * Math.abs(Math.sin(d.getHours()))) : 0) : msg.period === "month" ? 7000 : days.water[iso(d)] ?? 150 });
+    }
+    return { [id]: out };
+  }
+  return {};
+};
+window.hass = { language: "en", locale: { language: "en" }, states, entities: {}, devices: {}, themes: { darkMode: false }, callWS, callService: async () => {} };
+
+// Load the card given as ?card=..., default: the built file of the integration
+const script = document.createElement("script");
+script.src = new URLSearchParams(location.search).get("card") || "../../custom_components/gruenbeck_cloud_se/frontend/gruenbeck-card.js";
+script.onload = () => {
+  const card = document.createElement("gruenbeck-card");
+  card.setConfig({});
+  document.getElementById("stage").appendChild(card);
+  card.hass = window.hass;
+};
+document.body.appendChild(script);
+</script>
+</body>
+</html>

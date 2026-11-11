@@ -4,9 +4,12 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import config_validation as cv, device_registry as dr, entity_registry as er
+from homeassistant.helpers.typing import ConfigType
 from pygruenbeck_cloud import PyGruenbeckCloud
 
+from .blueprint import async_install_blueprint
+from .card import async_register_card
 from .const import CONF_DEVICE_ID, DOMAIN, LOGGER, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
 from .coordinator import GruenbeckDataUpdateCoordinator
 from .entity import ENTITY_GROUPS
@@ -48,6 +51,16 @@ PLATFORMS: list[Platform] = [
     Platform.DATE,
     Platform.BUTTON,
 ]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the integration: serve the dashboard card."""
+    await async_register_card(hass)
+    await async_install_blueprint(hass)
+    return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Grünbeck Cloud SE from a config entry."""

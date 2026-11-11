@@ -1,0 +1,14 @@
+{
+  "name": "gruenbeck-card",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "lint": "eslint src",
+    "check": "node check_i18n.mjs && eslint src"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.0",
+    "eslint": "^9.0.0"
+  }
+}

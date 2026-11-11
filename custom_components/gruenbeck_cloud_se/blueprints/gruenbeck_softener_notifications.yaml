@@ -1,0 +1,438 @@
+blueprint:
+  name: Grünbeck softener notifications
+  description: >-
+    Notifies you about your Grünbeck water softener (Grünbeck Cloud SE
+    integration): device error, salt running low, no new data, maintenance
+    or inspection due, regeneration finished and water flowing unusually
+    long (possible leak). Every event is optional: leave its sensor empty to
+    skip it. Optionally repeats warnings that stay active and tells you when
+    the Grünbeck cloud is unreachable. You choose what happens in "Actions", e.g. a phone notification,
+    a speaker announcement or Telegram. The variables `title` and `message`
+    hold the text in the chosen language, `event` the kind of event (error,
+    salt, no_data, unreachable, no_poll, maintenance, inspection,
+    regeneration_done, flow, repeat, routine, back_home).
+  domain: automation
+  source_url: https://github.com/sventiffe/gruenbeck_cloud_se/blob/main/blueprints/automation/gruenbeck_cloud_se/gruenbeck_softener_notifications.yaml
+  input:
+    language:
+      name: Language of the messages
+      description: >-
+        Language of the notification texts (title and message). The texts of this
+        form itself are always English.
+      default: en
+      selector:
+        select:
+          options:
+            - label: English
+              value: en
+            - label: Deutsch
+              value: de
+    events:
+      name: Events
+      icon: mdi:bell-alert
+      input:
+        device_error:
+          name: Device error
+          description: >-
+            The "Device error" binary sensor. The text of the last error
+            for the message is read from its attribute "last_error".
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: binary_sensor
+                  device_class: problem
+        salt_warning:
+          name: Salt warning
+          description: The "Salt warning" binary sensor. Not on the softliQ SE18.
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: binary_sensor
+                  device_class: problem
+        no_data_change:
+          name: No data change
+          description: >-
+            The "No data change" binary sensor. Turns on when the cloud
+            delivers no changed values for 24 hours, e.g. after a power cut
+            or while an error waits for acknowledgement on the device.
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: binary_sensor
+        unreachable_minutes:
+          name: Unreachable for longer than
+          description: >-
+            How long "Last poll" must stay "unavailable"
+            before you are told that the cloud is unreachable.
+          default: 30
+          selector:
+            number:
+              min: 5
+              max: 720
+              step: 5
+              unit_of_measurement: min
+        last_poll:
+          name: Last poll sensor (cloud reachable?)
+          description: >-
+            The "Last poll" sensor, time of the last successful poll. Two
+            messages come from it: "cloud unreachable" when it becomes
+            unavailable for the minutes set above, and "no poll for hours"
+            when the last poll is older than the hours below, even though the
+            other entities look normal.
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: sensor
+                  device_class: timestamp
+        poll_hours:
+          name: Last poll older than
+          description: Hours without a successful poll before you are told.
+          default: 6
+          selector:
+            number:
+              min: 1
+              max: 72
+              unit_of_measurement: h
+        maintenance_days:
+          name: Days until maintenance
+          description: The "Days until maintenance" sensor.
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: sensor
+                  device_class: duration
+        inspection_days:
+          name: Days until inspection
+          description: The "Days until inspection" sensor.
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: sensor
+                  device_class: duration
+        remind_days:
+          name: Remind before maintenance or inspection
+          description: Days before the due date. A second message follows on the due date.
+          default: 14
+          selector:
+            number:
+              min: 1
+              max: 60
+              unit_of_measurement: d
+        regeneration_running:
+          name: Regeneration finished
+          description: >-
+            The "Regeneration running" binary sensor, to be told when a
+            regeneration has finished. Leave empty if you don't need it.
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: binary_sensor
+                  device_class: running
+        flow_rate:
+          name: Long water flow (possible leak)
+          description: >-
+            The "Flow rate" sensor. Notifies when water flows longer than
+            the time below without a break. The cloud reports the flow only
+            every few minutes, so this is a hint, not a leak detector.
+          default: []
+          selector:
+            entity:
+              filter:
+                - integration: gruenbeck_cloud_se
+                  domain: sensor
+                  device_class: volume_flow_rate
+        flow_minutes:
+          name: Flowing longer than
+          description: >-
+            Water flows without a break for this many minutes. The cloud only
+            delivers the flow every few minutes, so this is a hint, not a leak detector.
+          default: 60
+          selector:
+            number:
+              min: 10
+              max: 480
+              step: 5
+              unit_of_measurement: min
+    repeat:
+      name: Repeat
+      icon: mdi:repeat
+      input:
+        repeat_days:
+          name: Repeat warnings every
+          description: >-
+            A warning that stays active (error, salt, no data, unreachable,
+            overdue maintenance or inspection) is repeated every this many
+            days as "Still active: …", at the time below. 0 = no repeat.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 14
+              unit_of_measurement: d
+        repeat_time:
+          name: Time of the repeat
+          description: Time of day at which warnings that are still active are repeated.
+          default: "09:00:00"
+          selector:
+            time:
+    routine:
+      name: Routine check
+      icon: mdi:calendar-check
+      input:
+        routine_months:
+          name: Routine check reminder every
+          description: >-
+            A reminder to look at the softener yourself (leaks, salt supply,
+            messages), on the 1st of the month. The manual recommends every
+            2 months. 0 = off.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 12
+              unit_of_measurement: months
+        routine_time:
+          name: Time of the routine check reminder
+          description: Time of day of the reminder, on the 1st of the month.
+          default: "10:00:00"
+          selector:
+            time:
+    delivery:
+      name: Delivery
+      icon: mdi:send
+      input:
+        only_when_home:
+          name: Only when someone is home
+          description: >-
+            Hold back messages while nobody is home and send the warnings
+            that are still active once someone has been back for 30 minutes.
+            Avoids messages on holiday.
+          default: false
+          selector:
+            boolean:
+        notify:
+          name: Actions
+          description: >-
+            What to do with the message, e.g. "Notifications > Send a
+            notification via mobile_app_…" with title "{{ title }}" and
+            message "{{ message }}".
+          selector:
+            action:
+
+mode: queued
+max_exceeded: silent
+
+trigger_variables:
+  flow_minutes: !input flow_minutes
+  unreachable_minutes: !input unreachable_minutes
+  poll_hours: !input poll_hours
+  last_poll: !input last_poll
+
+triggers:
+  - trigger: state
+    entity_id: !input device_error
+    to: "on"
+    for: "00:05:00"
+    id: error
+  - trigger: state
+    entity_id: !input salt_warning
+    to: "on"
+    for: "00:10:00"
+    id: salt
+  - trigger: state
+    entity_id: !input no_data_change
+    to: "on"
+    id: no_data
+  - trigger: state
+    entity_id: !input last_poll
+    to: unavailable
+    for:
+      minutes: "{{ unreachable_minutes | int }}"
+    id: unreachable
+  - trigger: template
+    value_template: >-
+      {{ last_poll is string and last_poll != ''
+         and states(last_poll) not in ['unknown', 'unavailable']
+         and (now() - (states(last_poll) | as_datetime)).total_seconds() > poll_hours | int * 3600 }}
+    id: no_poll
+  - trigger: time
+    at: !input repeat_time
+    id: repeat
+  - trigger: time
+    at: !input routine_time
+    id: routine
+  - trigger: numeric_state
+    entity_id: !input maintenance_days
+    below: !input remind_days
+    id: maintenance
+  - trigger: numeric_state
+    entity_id: !input maintenance_days
+    below: 1
+    id: maintenance
+  - trigger: numeric_state
+    entity_id: !input inspection_days
+    below: !input remind_days
+    id: inspection
+  - trigger: numeric_state
+    entity_id: !input inspection_days
+    below: 1
+    id: inspection
+  - trigger: state
+    entity_id: !input regeneration_running
+    from: "on"
+    to: "off"
+    id: regeneration_done
+  - trigger: numeric_state
+    entity_id: !input flow_rate
+    above: 0
+    for:
+      minutes: "{{ flow_minutes | int }}"
+    id: flow
+  - trigger: numeric_state
+    entity_id: zone.home
+    above: 0
+    for: "00:30:00"
+    id: back_home
+
+variables:
+  lang: !input language
+  only_when_home: !input only_when_home
+  device_error: !input device_error
+  salt_warning: !input salt_warning
+  no_data_change: !input no_data_change
+  maintenance_days: !input maintenance_days
+  inspection_days: !input inspection_days
+  remind_days: !input remind_days
+  # "Last poll" turns unavailable when the cloud cannot be reached
+  unreach_on: "{{ last_poll if last_poll is string and last_poll != '' and is_state(last_poll, 'unavailable') else '' }}"
+  repeat_days: !input repeat_days
+  routine_months: !input routine_months
+  event: "{{ trigger.id }}"
+  text:
+    en:
+      title: Grünbeck
+      error: "Device error: {}. Acknowledge it on the device display, until then the device sends no new data."
+      error_unknown: Device error. Check the device display.
+      salt: The salt is running low. Please refill salt.
+      no_data: "No new data since {}. Check the device display and its network connection."
+      unreachable: "The Grünbeck cloud has been unreachable for {} minutes. Check the internet connection, the Grünbeck cloud and the login."
+      routine: "Routine check ({} months): look for leaks, check the salt supply and the messages on the display."
+      no_poll: "No successful poll for {} hours. Check the Grünbeck cloud connection."
+      maintenance_soon: "Maintenance is due in {} days."
+      maintenance_now: Maintenance is due. Press "Maintenance done" afterwards.
+      inspection_soon: "Inspection is due in {} days."
+      inspection_now: Inspection is due. Press "Inspection done" afterwards.
+      regeneration_done: Regeneration finished.
+      flow: "Water has been flowing for {} minutes without a break. Possible leak?"
+      still_active: "Still active: {}"
+      names:
+        error: device error
+        salt: salt running low
+        no_data: no new data
+        unreachable: cloud unreachable
+        maintenance: maintenance due
+        inspection: inspection due
+    de:
+      title: Grünbeck
+      error: "Störung: {}. Bitte am Display der Anlage quittieren, bis dahin sendet sie keine neuen Daten."
+      error_unknown: Störung. Bitte das Display der Anlage prüfen.
+      salt: Das Salz wird knapp. Bitte Salz nachfüllen.
+      no_data: "Keine neuen Daten seit {}. Bitte Display und Netzwerkverbindung der Anlage prüfen."
+      unreachable: "Die Grünbeck-Cloud ist seit {} Minuten nicht erreichbar. Bitte Internetverbindung, Grünbeck-Cloud und Anmeldung prüfen."
+      routine: "Routinekontrolle (alle {} Monate): Auf Leckagen achten, Salzvorrat und Meldungen am Display prüfen."
+      no_poll: "Seit {} Stunden keine erfolgreiche Abfrage. Bitte die Verbindung zur Grünbeck-Cloud prüfen."
+      maintenance_soon: "Wartung in {} Tagen fällig."
+      maintenance_now: Wartung ist fällig. Danach „Wartung erledigt“ drücken.
+      inspection_soon: "Inspektion in {} Tagen fällig."
+      inspection_now: Inspektion ist fällig. Danach „Inspektion erledigt“ drücken.
+      regeneration_done: Regeneration abgeschlossen.
+      flow: "Seit {} Minuten fließt ohne Pause Wasser. Vielleicht ein Leck?"
+      still_active: "Weiterhin aktiv: {}"
+      names:
+        error: Störung
+        salt: Salz nachfüllen
+        no_data: keine neuen Daten
+        unreachable: Cloud nicht erreichbar
+        maintenance: Wartung fällig
+        inspection: Inspektion fällig
+  t: "{{ text[lang] if lang in text else text.en }}"
+  # Warnings that are still on, for the message after coming home
+  active: >-
+    {% set ns = namespace(items=[]) %}
+    {% if device_error and is_state(device_error, 'on') %}{% set ns.items = ns.items + [t.names.error] %}{% endif %}
+    {% if salt_warning and is_state(salt_warning, 'on') %}{% set ns.items = ns.items + [t.names.salt] %}{% endif %}
+    {% if no_data_change and is_state(no_data_change, 'on') %}{% set ns.items = ns.items + [t.names.no_data] %}{% endif %}
+    {% if unreach_on %}{% set ns.items = ns.items + [t.names.unreachable] %}{% endif %}
+    {% if maintenance_days and states(maintenance_days) | int(999) < remind_days | int %}{% set ns.items = ns.items + [t.names.maintenance] %}{% endif %}
+    {% if inspection_days and states(inspection_days) | int(999) < remind_days | int %}{% set ns.items = ns.items + [t.names.inspection] %}{% endif %}
+    {{ ns.items }}
+  # Warnings that are still active and due for a repeat: whole days since
+  # they started (overdue days for maintenance/inspection) are a multiple of
+  # the repeat interval
+  repeat_items: >-
+    {% set ns = namespace(items=[]) %}
+    {% set n = repeat_days | int(0) %}
+    {% if n > 0 %}
+      {% for ent, name, on in [(device_error, t.names.error, 'on'), (salt_warning, t.names.salt, 'on'), (no_data_change, t.names.no_data, 'on'), (unreach_on, t.names.unreachable, 'unavailable')] %}
+        {% if ent and is_state(ent, on) %}
+          {% set age = ((now() - states[ent].last_changed).total_seconds() // 86400) | int %}
+          {% if age >= n and age % n == 0 %}{% set ns.items = ns.items + [name] %}{% endif %}
+        {% endif %}
+      {% endfor %}
+      {% for ent, name in [(maintenance_days, t.names.maintenance), (inspection_days, t.names.inspection)] %}
+        {% if ent and states(ent) | int(999) < 1 %}
+          {% set age = -(states(ent) | int(0)) %}
+          {% if age >= n and age % n == 0 %}{% set ns.items = ns.items + [name] %}{% endif %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    {{ ns.items }}
+  title: "{{ t.title }}"
+  message: >-
+    {% if event == 'error' %}
+      {% set err = state_attr(device_error, 'last_error') if device_error else '' %}
+      {% set err = err if err else '' %}
+      {{ t.error.replace('{}', err) if err not in ['', 'OK', 'unknown', 'unavailable'] else t.error_unknown }}
+    {% elif event == 'salt' %}{{ t.salt }}
+    {% elif event == 'no_data' %}
+      {% set since = state_attr(no_data_change, 'since') %}
+      {{ t.no_data.replace('{}', as_timestamp(since) | timestamp_custom('%d.%m. %H:%M') if since else '?') }}
+    {% elif event == 'unreachable' %}{{ t.unreachable.replace('{}', unreachable_minutes | int | string) }}
+    {% elif event == 'no_poll' %}{{ t.no_poll.replace('{}', poll_hours | int | string) }}
+    {% elif event == 'routine' %}{{ t.routine.replace('{}', routine_months | int | string) }}
+    {% elif event == 'repeat' %}{{ t.still_active.replace('{}', repeat_items | join(', ')) }}
+    {% elif event in ['maintenance', 'inspection'] %}
+      {% set days = trigger.to_state.state | int(0) %}
+      {{ t[event ~ '_soon'].replace('{}', days | string) if days > 0 else t[event ~ '_now'] }}
+    {% elif event == 'regeneration_done' %}{{ t.regeneration_done }}
+    {% elif event == 'flow' %}{{ t.flow.replace('{}', flow_minutes | int | string) }}
+    {% elif event == 'back_home' %}{{ t.still_active.replace('{}', active | join(', ')) }}
+    {% endif %}
+
+conditions:
+  # Coming home only matters when messages were held back, and only when
+  # something is still active
+  - condition: template
+    value_template: "{{ event != 'back_home' or (only_when_home and active | count > 0) }}"
+  - condition: template
+    value_template: "{{ event != 'repeat' or repeat_items | count > 0 }}"
+  - condition: template
+    value_template: "{{ event != 'routine' or (routine_months | int(0) > 0 and now().day == 1 and (now().month - 1) % (routine_months | int(1)) == 0) }}"
+  - condition: template
+    value_template: "{{ event == 'back_home' or not only_when_home or states('zone.home') | int(0) > 0 }}"
+
+actions: !input notify

@@ -38,3 +38,6 @@ venv/
 # Antigravity CLI
 .antigravitycli/
 
+
+# Card build
+node_modules/
