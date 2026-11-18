@@ -1777,6 +1777,47 @@
             "name": "Letzter gezählter Tag"
           }
         }
+      },
+      "water_meter": {
+        "name": "Wasseruhr",
+        "state_attributes": {
+          "description": {
+            "name": "Beschreibung"
+          },
+          "daily": {
+            "name": "Tageswerte"
+          },
+          "errors": {
+            "name": "Fehler"
+          },
+          "consumed_liters": {
+            "name": "Verbrauch seit letzter Abfrage (L)"
+          },
+          "raw_value": {
+            "name": "Rohwert"
+          },
+          "days": {
+            "name": "Tage"
+          },
+          "first_day": {
+            "name": "Erster Tag"
+          },
+          "regeneration_count": {
+            "name": "Regenerationszähler"
+          },
+          "history": {
+            "name": "Verlauf"
+          },
+          "changes": {
+            "name": "Änderungen"
+          },
+          "last_day": {
+            "name": "Letzter gezählter Tag"
+          },
+          "last_adjustment": "Letzter Abgleich",
+          "last_deviation": "Letzte Abweichung",
+          "adjustments": "Abgleiche"
+        }
       }
     },
     "binary_sensor": {
@@ -1957,6 +1998,14 @@
           },
           "changes": {
             "name": "Änderungen"
+          }
+        }
+      },
+      "water_meter_adjust": {
+        "name": "Wasseruhr abgleichen",
+        "state_attributes": {
+          "description": {
+            "name": "Beschreibung"
           }
         }
       }

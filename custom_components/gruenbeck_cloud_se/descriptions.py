@@ -138,6 +138,14 @@ DESCRIPTIONS: dict[str, dict[str, str]] = {
         "en": "Salt used yesterday according to the cloud. 0 on days without regeneration.",
         "de": "Salzverbrauch von gestern laut Cloud. An Tagen ohne Regeneration 0.",
     },
+    "water_meter": {
+        "en": "Reading of the real water meter: the calculated water consumption plus the difference from the last adjustment. Unknown until adjusted once. Not a statistics sensor, a jump after an adjustment or a meter exchange does not count as consumption. Adjust it with the entity Adjust water meter.",
+        "de": "Stand der echten Wasseruhr: berechneter Wasserverbrauch plus Unterschied aus dem letzten Abgleich. Unbekannt, bis einmal abgeglichen wurde. Kein Statistik-Sensor, ein Sprung nach einem Abgleich oder Zählertausch zählt nicht als Verbrauch. Abgleich über die Entität Wasseruhr abgleichen.",
+    },
+    "water_meter_adjust": {
+        "en": "Enter the reading of your real water meter in m³ to adjust the water meter sensor. After an exchange of the meter enter the new reading. Shows the current reading of the sensor.",
+        "de": "Stand deiner echten Wasseruhr in m³ eintragen, um den Sensor Wasseruhr abzugleichen. Nach einem Zählertausch den neuen Stand eintragen. Zeigt den aktuellen Stand des Sensors.",
+    },
     "water_total": {
         "en": "Running total of water, adds up the daily cloud values (completed days only, so it counts a day late). A cross-check for the calculated water consumption.",
         "de": "Fortlaufender Wasserverbrauch, zählt die Tageswerte der Cloud zusammen (nur abgeschlossene Tage, also einen Tag später). Gegenprobe zum berechneten Wasserverbrauch.",

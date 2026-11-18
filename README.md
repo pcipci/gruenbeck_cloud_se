@@ -88,6 +88,9 @@ On devices with two exchangers (not the softliQ SE) the main device also has *Re
 | Platform | Entity | Description |
 |---|---|---|
 | `sensor` | Calculated water consumption | Lifetime total in `L`, for the Energy dashboard |
+| `sensor` | Water meter | Reading of your real water meter in `m³`: calculated consumption plus the difference from the last adjustment. Unknown until adjusted, not a statistics sensor. Attribute `adjustments` lists the last 20 adjustments with time, entered reading and deviation |
+| `number` | Adjust water meter | Enter the reading of your real water meter in `m³` (also after a meter exchange) |
+| `sensor` | Water usage total | Running total in `L`, counted from the daily cloud values (one day late), a cross-check for the calculated consumption |
 | `sensor` | Average flow rate (last interval) | Average flow between the last two polls (`L/min`) |
 | `sensor` | Water volume 0 °dH | Soft water meter of the device (`m³`, whole m³) |
 | `sensor` | Make-up water | Water used to refill the brine tank (`L`) |

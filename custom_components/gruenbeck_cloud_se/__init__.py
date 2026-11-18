@@ -90,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await coordinator.async_load_service_dates()
     await coordinator.async_load_salt_refills()
+    await coordinator.async_load_water_meter()
     await coordinator.async_load_setting_changes()
 
     # Fetch initial data before completing setup

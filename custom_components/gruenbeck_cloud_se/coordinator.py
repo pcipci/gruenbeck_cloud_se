@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -43,6 +43,7 @@ WATCHED_CHANGE_SOURCES = ("_info", "_parameters")
 IGNORED_SETTING_KEYS = {"pdate", "regMo1", "$pending"}
 MAX_SETTING_CHANGES = 50
 SALT_REFILL_HISTORY_SIZE = 20
+WATER_METER_HISTORY_SIZE = 20
 
 
 class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -92,6 +93,15 @@ class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.salt_refills: list[str] = []
         self._refills_store: Store = Store(
             hass, 1, f"{DOMAIN}_{device_id}_salt_refills"
+        )
+
+        # Water meter adjustments: offset between the calculated water
+        # consumption and the real meter (litres) and the log of adjustments
+        self.calculated_water_l: float | None = None
+        self.meter_offset_l: float | None = None
+        self.meter_adjustments: list[dict[str, Any]] = []
+        self._meter_store: Store = Store(
+            hass, 1, f"{DOMAIN}_{device_id}_water_meter"
         )
 
         # Log of changed settings, e.g. to find out which parameter an app
@@ -473,6 +483,64 @@ class GruenbeckDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.salt_refills = self.salt_refills[-SALT_REFILL_HISTORY_SIZE:]
         self.hass.async_create_task(
             self._refills_store.async_save({"refills": self.salt_refills})
+        )
+        self.async_update_listeners()
+
+    async def async_load_water_meter(self) -> None:
+        """Load the stored water meter adjustments."""
+        stored = await self._meter_store.async_load() or {}
+        try:
+            self.meter_offset_l = float(stored["offset_l"])
+        except (KeyError, TypeError, ValueError):
+            self.meter_offset_l = None
+        log = stored.get("adjustments")
+        self.meter_adjustments = (
+            [a for a in log if isinstance(a, dict)] if isinstance(log, list) else []
+        )
+
+    def water_meter_reading(self) -> float | None:
+        """Return the water meter reading in m³ (calculated plus offset).
+
+        None until the meter was adjusted once or while the calculated
+        consumption is not known.
+        """
+        if self.meter_offset_l is None or self.calculated_water_l is None:
+            return None
+        return round((self.calculated_water_l + self.meter_offset_l) / 1000, 3)
+
+    async def async_adjust_water_meter(self, value_m3: float) -> None:
+        """Set the water meter to the reading of the real meter (in m³).
+
+        The calculated consumption stays untouched. Only the difference is
+        remembered, together with a log entry of what was shown before.
+        """
+        calculated = self.calculated_water_l
+        if calculated is None:
+            raise ServiceValidationError(
+                "The calculated water consumption is not known yet"
+            )
+        shown = self.water_meter_reading()
+        previous = self.meter_adjustments[0] if self.meter_adjustments else None
+        entry: dict[str, Any] = {
+            "time": dt_util.now().isoformat(timespec="minutes"),
+            "entered_m3": round(value_m3, 3),
+            "calculated_m3": round(calculated / 1000, 3),
+        }
+        if shown is not None:
+            entry["shown_m3"] = shown
+            entry["deviation_m3"] = round(value_m3 - shown, 3)
+            if previous and previous.get("calculated_m3") is not None:
+                consumed = calculated / 1000 - float(previous["calculated_m3"])
+                entry["consumed_m3"] = round(consumed, 3)
+                if consumed > 0:
+                    entry["deviation_percent"] = round(
+                        (value_m3 - shown) / consumed * 100, 1
+                    )
+        self.meter_offset_l = value_m3 * 1000 - calculated
+        self.meter_adjustments.insert(0, entry)
+        del self.meter_adjustments[WATER_METER_HISTORY_SIZE:]
+        await self._meter_store.async_save(
+            {"offset_l": self.meter_offset_l, "adjustments": self.meter_adjustments}
         )
         self.async_update_listeners()
 

@@ -472,6 +472,7 @@ async def async_setup_entry(
 
     # Add the special calculated water consumption sensor
     entities.append(GruenbeckCalculatedWaterConsumptionSensor(coordinator))
+    entities.append(GruenbeckWaterMeterSensor(coordinator))
     entities.append(GruenbeckSaltTotalSensor(coordinator))
     if coordinator.data.get("_water") is not None:
         entities.append(GruenbeckWaterTotalSensor(coordinator))
@@ -604,6 +605,7 @@ class GruenbeckCalculatedWaterConsumptionSensor(
             self._state = 0.0
 
         self._restored = True
+        self.coordinator.calculated_water_l = self._state
         self.async_write_ha_state()
 
     @property
@@ -653,11 +655,50 @@ class GruenbeckCalculatedWaterConsumptionSensor(
             except (ValueError, TypeError):
                 pass
 
+        self.coordinator.calculated_water_l = self._state
         self.async_write_ha_state()
 
         # Save to store if updated
         if state_changed and self._store is not None:
             self.hass.async_create_task(self._store.async_save({"state": self._state}))
+
+
+class GruenbeckWaterMeterSensor(GruenbeckEntity, SensorEntity):
+    """The reading of the real water meter, from the calculated consumption.
+
+    Shows the calculated consumption plus the difference remembered at the
+    last adjustment. It is deliberately no statistics sensor: a meter that
+    was exchanged or re-adjusted makes it jump, which must not count as
+    consumption. Unknown until the meter was adjusted once.
+    """
+
+    _attr_device_class = SensorDeviceClass.WATER
+    _attr_native_unit_of_measurement = UnitOfVolume.CUBIC_METERS
+    _attr_suggested_display_precision = 3
+    _attr_icon = "mdi:counter"
+    # The adjustments are kept in the store, not in the history
+    _unrecorded_attributes = frozenset({"description", "adjustments"})
+
+    def __init__(self, coordinator: GruenbeckDataUpdateCoordinator) -> None:
+        """Initialize the water meter sensor."""
+        super().__init__(coordinator, "water_meter")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the meter reading in m³."""
+        return self.coordinator.water_meter_reading()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the description and the adjustments, newest first."""
+        attributes = dict(super().extra_state_attributes or {})
+        log = self.coordinator.meter_adjustments
+        if log:
+            attributes["last_adjustment"] = log[0].get("time")
+            if log[0].get("deviation_m3") is not None:
+                attributes["last_deviation"] = log[0]["deviation_m3"]
+            attributes["adjustments"] = list(log)
+        return attributes or None
 
 
 class GruenbeckDailyTotalSensor(GruenbeckEntity, SensorEntity):

@@ -1777,6 +1777,47 @@
             "name": "Last counted day"
           }
         }
+      },
+      "water_meter": {
+        "name": "Water meter",
+        "state_attributes": {
+          "description": {
+            "name": "Description"
+          },
+          "daily": {
+            "name": "Daily values"
+          },
+          "errors": {
+            "name": "Errors"
+          },
+          "consumed_liters": {
+            "name": "Consumed since last poll (L)"
+          },
+          "raw_value": {
+            "name": "Raw value"
+          },
+          "days": {
+            "name": "Days"
+          },
+          "first_day": {
+            "name": "First day"
+          },
+          "regeneration_count": {
+            "name": "Regeneration count"
+          },
+          "history": {
+            "name": "History"
+          },
+          "changes": {
+            "name": "Changes"
+          },
+          "last_day": {
+            "name": "Last counted day"
+          },
+          "last_adjustment": "Last adjustment",
+          "last_deviation": "Last deviation",
+          "adjustments": "Adjustments"
+        }
       }
     },
     "binary_sensor": {
@@ -1957,6 +1998,14 @@
           },
           "changes": {
             "name": "Changes"
+          }
+        }
+      },
+      "water_meter_adjust": {
+        "name": "Adjust water meter",
+        "state_attributes": {
+          "description": {
+            "name": "Description"
           }
         }
       }

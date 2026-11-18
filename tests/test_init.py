@@ -148,3 +148,24 @@ async def test_unload(hass, setup_integration):
     """The config entry unloads cleanly."""
     entry = await setup_integration()
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_water_meter_adjust(hass, setup_integration):
+    """The water meter is unknown until the real meter reading is entered."""
+    await setup_integration()
+    meter = "sensor.se21_consumption_water_meter"
+    adjust = "number.se21_consumption_adjust_water_meter"
+    assert hass.states.get(meter).state == "unknown"
+    assert hass.states.get(adjust) is not None
+    assert hass.states.get(meter).attributes["description"]
+
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": adjust, "value": 124.88}, blocking=True
+    )
+    await hass.async_block_till_done()
+    state = hass.states.get(meter)
+    assert float(state.state) == 124.88
+    assert state.attributes["adjustments"][0]["entered_m3"] == 124.88
+    assert float(hass.states.get(adjust).state) == 124.88
+    # a stats sensor must not be created for the meter
+    assert "state_class" not in state.attributes

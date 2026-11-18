@@ -7,6 +7,7 @@
 * Automation blueprint *Grünbeck softener notifications*, installed to `blueprints/automation/gruenbeck_cloud_se/` on startup. See `docs/notifications.md`.
 * Websocket command `gruenbeck_cloud_se/card_info` for the card (entity ids, notification automations, daily values).
 * Card sources as ES modules in `card/` with a build script, texts in `card/src/i18n/*.json`.
+* Sensor *Water meter* and number *Adjust water meter*: enter the reading of the real water meter to see it as a sensor (calculated consumption plus the remembered difference, no statistics sensor, so adjustments and meter exchanges do not count as consumption). The last 20 adjustments are listed in the attribute `adjustments` with time, entered reading, calculated value and deviation.
 * Sensor *Water usage total*: running total in litres from the daily cloud values, a cross-check for the calculated water consumption (one day late).
 * Sensors *Salt usage total* and *Lime retained total*: running totals in `kg`, counted from the daily cloud values. Counted days are remembered for 400 days, so the totals survive when the cloud drops old days. The totals are unknown until a first daily value arrived, instead of 0.
 * Binary sensor *No data change*: on when the telemetry has not changed for a long time (attribute `since`).
