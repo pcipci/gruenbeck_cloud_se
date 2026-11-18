@@ -197,6 +197,10 @@ Entities that no longer exist (exchanger 2 on softliQ SE devices, sensors that a
 
 The sensor ignores the transient `0 L` capacity during regeneration, so capacity resets are not counted as usage.
 
+### Water meter
+
+To compare the calculation with your real water meter, enter its reading in *Adjust water meter* (**Settings → Devices & services → your device → Consumption**). The sensor *Water meter* then shows that reading, counted on from the calculated consumption. It stays unknown until you adjust it once. It is deliberately no statistics sensor, so an adjustment or an exchanged meter (just enter the new reading) never counts as consumption. The attribute `adjustments` lists the last 20 adjustments with time, entered reading and the deviation from what the sensor showed. *Water usage total* adds up the daily cloud values (one day late) as a second cross-check; in a test period the calculation was about 7 % above the cloud values.
+
 ---
 
 ## Known limitations
