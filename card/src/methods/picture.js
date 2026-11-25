@@ -226,7 +226,9 @@ export const pictureMethods = {
   _meter(flow) {
     if (!this._entityId("calculated_water_consumption") && !this._entityId("mflow1")) return "";
     const t = this._t;
-    const total = (this._num("calculated_water_consumption") || 0) / 1000;
+    // The reading of the real meter if it was adjusted, else the calculation
+    const adjusted = this._num("water_meter");
+    const total = adjusted != null ? adjusted : (this._num("calculated_water_consumption") || 0) / 1000;
     const n = Math.floor(total);
     const tdigits = String(n).padStart(5, "0").slice(-5).split("").concat(String(Math.floor((total - n) * 10)));
     const fi = Math.floor(flow);
@@ -240,10 +242,10 @@ export const pictureMethods = {
     const moving = flow > 0;
     const color = moving ? "#1565c0" : "#5b6478";
     const blades = [0, 120, 240].map((a) => `<path d="M356 70 L351 60.4 A11 11 0 0 1 361 60.4 Z" fill="#3d8bd6" transform="rotate(${a} 356 70)"/>`).join("");
-    const tip = `${t.water_meter}: ${this._number(total, 1)} m³, ${t.flow_now}: ${this._number(flow, 1)} L/min`;
+    const tip = `${t.water_meter}: ${this._number(total, adjusted != null ? 3 : 1)} m³, ${t.flow_now}: ${this._number(flow, 1)} L/min`;
     return `<g><title>${esc(tip)}</title>
       <rect x="336" y="44" width="154" height="52" rx="12" fill="url(#pipe)" stroke="#b7c3ce"/>
-      <g class="tap" data-panel="chart:water:total"><title>${esc(`${t.water_meter}: ${this._number(total, 1)} m³`)}</title>
+      <g class="tap" data-panel="chart:water:total"><title>${esc(`${t.water_meter}: ${this._number(total, adjusted != null ? 3 : 1)} m³`)}</title>
         <rect x="378" y="46" width="108" height="26" fill="transparent"/>
         ${counter(381, 50, tdigits)}${text(381 + 6 * cw + 3, 62.5, "m³", 'font-size="12" font-weight="700" fill="#5b6478"')}
       </g>

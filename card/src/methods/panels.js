@@ -137,8 +137,9 @@ export const panelsMethods = {
       const periods = p.what === "flow" ? ["day", "days"] : p.what === "water" ? ["day", "days", "month", "year", "total"] : ["days", "month", "year", "total"];
       const label = { day: t.today, days: t.days, month: t.month, year: t.year, total: t.total };
       body = `<div class="seg">${periods.map((x) => `<button class="period${x === p.period ? " on" : ""}" data-period="${x}">${esc(label[x])}</button>`).join("")}</div>`;
-      if (p.period === "total" && p.what !== "flow") body += `<div class="bigtotal">${esc(this._totalText(p.what))}</div>`;
-      body += this._chartSvg();
+      // The total is one number, a single bar would say nothing: figures instead
+      if (p.period === "total" && p.what !== "flow") body += `<div class="bigtotal">${esc(this._totalText(p.what))}</div>${this._totalList()}`;
+      else body += this._chartSvg();
       if (p.what !== "water" && p.what !== "flow" && p.data?.range) body += this._ratioList(p.data.range, p.period === "total");
     }
     const info = more && this._entityId(more)
@@ -230,6 +231,14 @@ export const panelsMethods = {
   async _loadChart() {
     const p = this._panel;
     if (!p || p.kind !== "chart") return;
+    if (p.what === "water" && p.period === "total") {
+      const compare = await this._waterCompare();
+      if (this._panel && this._panel.kind === "chart" && this._panel.what === "water" && this._panel.period === "total") {
+        this._panel = { ...this._panel, data: { compare } };
+        this._update();
+      }
+      return;
+    }
     if (p.what !== "water" && p.what !== "flow" && this._dev?.days) {
       this._panel = { ...p, data: this._dayChart(p.what, p.period) };
       this._update();
@@ -281,6 +290,71 @@ export const panelsMethods = {
       this._panel = { ...this._panel, data: { values, labels: range.labels, buckets: range.buckets.map((b) => b.getTime()), end: range.end.getTime() } };
       this._update();
     }
+  },
+
+  // Calculated consumption against the daily cloud values over the same
+  // days (last 30 days with a cloud value); null if not enough data
+  async _waterCompare() {
+    const id = this._entityId("calculated_water_consumption");
+    const map = this._dayMap("water");
+    const today = this._iso(new Date());
+    const days = Object.keys(map).filter((d) => d < today).sort().slice(-30);
+    if (!id || days.length < 2) return null;
+    try {
+      const first = new Date(`${days[0]}T00:00:00`);
+      const last = new Date(`${days[days.length - 1]}T00:00:00`);
+      const res = await this._hass.callWS({
+        type: "recorder/statistics_during_period",
+        start_time: first.toISOString(),
+        end_time: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).toISOString(),
+        statistic_ids: [id],
+        period: "day",
+        types: ["change"],
+      });
+      const byStart = new Map((res?.[id] || []).map((r) => [new Date(r.start).getTime(), r.change]));
+      let cloud = 0;
+      let calc = 0;
+      let n = 0;
+      for (const d of days) {
+        const c = byStart.get(new Date(`${d}T00:00:00`).getTime());
+        if (typeof c === "number" && typeof map[d] === "number") {
+          cloud += map[d];
+          calc += c;
+          n++;
+        }
+      }
+      return n >= 2 && cloud > 0 ? { n, cloud, calc, pct: ((calc - cloud) / cloud) * 100 } : null;
+    } catch {
+      return null;
+    }
+  },
+
+  // Figures of the total tab: water meter, calculated and cloud totals with
+  // their deviation, average per day
+  _totalList() {
+    const t = this._t;
+    const what = this._panel.what;
+    const rows = [];
+    const sign = (v, digits) => `${v > 0 ? "+" : ""}${this._number(v, digits)}`;
+    if (what === "water") {
+      const meter = this._state("water_meter");
+      if (meter && !["unknown", "unavailable"].includes(meter.state) && Number.isFinite(Number(meter.state))) {
+        rows.push([t.water_meter, `${this._number(Number(meter.state), 3)} m³`]);
+        const at = meter.attributes?.last_adjustment;
+        if (at) rows.push([t.meter_adjusted, this._formatDate(at)]);
+        const dev = meter.attributes?.last_deviation;
+        if (typeof dev === "number") rows.push([t.meter_deviation, `${sign(dev, 3)} m³`]);
+      }
+      const cmp = this._panel.data?.compare;
+      if (cmp) {
+        rows.push([t.compare_calc.replace("{n}", cmp.n), this._liters(cmp.calc)]);
+        rows.push([t.compare_cloud.replace("{n}", cmp.n), this._liters(cmp.cloud)]);
+        rows.push([t.deviation_cloud, `${sign(cmp.pct, 1)} %`]);
+      }
+    }
+    const avg = this._avg30(what);
+    if (avg != null) rows.push([t.avg_day, what === "water" ? this._liters(avg) : this._kg(avg / 1000)]);
+    return rows.length ? `<ul class="ratios">${rows.map(([n, v]) => `<li><span>${esc(n)}</span><span>${esc(v)}</span></li>`).join("")}</ul>` : "";
   },
 
   // Bars of salt or lime (kg) for a period; "days" are the last 14 days up
@@ -374,6 +448,18 @@ export const panelsMethods = {
     return `<div class="buttons"><button class="pill done" style="background:${GREEN}"${locked ? " disabled" : ""}>${svgIcon(CHECK, locked ? "#5b6478" : "#fff", 18)}<span>${esc(label)}</span></button></div>`;
   },
 
+  // Average per day of the water chart (not for today)
+  _avgRow(nums, buckets, values, fmt) {
+    const p = this._panel;
+    if (p.period === "day") return "";
+    const now = Date.now();
+    const first = values.findIndex((v) => v != null);
+    if (first < 0) return "";
+    const days = Math.max(1, Math.ceil((Math.min(now, p.data.end ?? now) - buckets[first]) / 864e5));
+    const total = nums.reduce((a, b) => a + b, 0);
+    return `<div class="sum"><span>${esc(this._t.avg_per_day)}</span><b>${esc(fmt(total / days))}</b></div>`;
+  },
+
   _chartSvg() {
     const p = this._panel;
     const t = this._t;
@@ -402,6 +488,7 @@ export const panelsMethods = {
     });
     out += `<text x="0" y="11" font-size="10" fill="#8a96a3" font-family="${FONT}">${esc(t.max_flow)} ${esc(fmt(max))}</text>`;
     return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%">${out}</svg></div>
-      ${p.what === "flow" ? "" : `<div class="sum"><span>${esc(t.sum)}</span><b>${esc(fmt(total))}</b></div>`}`;
+      ${p.what === "flow" ? "" : `<div class="sum"><span>${esc(t.sum)}</span><b>${esc(fmt(total))}</b></div>`}
+      ${p.what === "water" ? this._avgRow(nums, buckets, values, fmt) : ""}`;
   },
 };

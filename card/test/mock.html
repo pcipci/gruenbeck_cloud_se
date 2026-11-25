@@ -42,6 +42,7 @@ set("sensor", "average_flow_rate", 4.2, { unit_of_measurement: "L/min" });
 set("sensor", "raw_water_hardness", 18, { unit_of_measurement: "°dH" });
 set("sensor", "soft_water_hardness", 4, { unit_of_measurement: "°dH" });
 set("sensor", "calculated_water_consumption", 412345, { unit_of_measurement: "L" });
+set("sensor", "water_meter", 412.388, { unit_of_measurement: "m³", last_adjustment: ago(12), last_deviation: 0.025 });
 set("sensor", "salt_total", 48.31, { unit_of_measurement: "kg" });
 set("sensor", "lime_total", 23.9, { unit_of_measurement: "kg" });
 set("sensor", "mcountreg", 431);
@@ -87,7 +88,7 @@ const callWS = async (msg) => {
       const d = new Date(t);
       const awake = d.getHours() > 6 && d.getHours() < 23;
       out.push({ start: t, state: 412000, max: awake ? 6.5 : 0,
-        change: msg.period === "hour" ? (awake ? Math.round(10 + 15 * Math.abs(Math.sin(d.getHours()))) : 0) : msg.period === "month" ? 7000 : days.water[iso(d)] ?? 150 });
+        change: msg.period === "hour" ? (awake ? Math.round(10 + 15 * Math.abs(Math.sin(d.getHours()))) : 0) : msg.period === "month" ? 7000 : (days.water[iso(d)] ?? 150) * (id.includes("calculated") ? 1.07 : 1) });
     }
     return { [id]: out };
   }

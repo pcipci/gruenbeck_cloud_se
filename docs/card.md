@@ -17,7 +17,7 @@ With one softener the card needs no configuration. It finds the entities of the 
 ## What it shows
 
 * **Picture of the softener**: resin tank filled to the remaining capacity, salt tablets (one tablet left on a salt warning), display with the remaining capacity in litres and percent, LED strip.
-* **Pipe on top**: raw and soft water hardness, a water meter with the total and the current flow. The water in the pipe moves while water flows.
+* **Pipe on top**: raw and soft water hardness, a water meter with the total (the adjusted reading if you entered one) and the current flow. The water in the pipe moves while water flows.
 * **Two status lamps**: softener (OK, error, no data change) and salt.
 * **Control lid**: the switches of the integration (iQ mode, signal on failure, LED ring options, live mode, regeneration tracking). Switching asks for confirmation.
 * **Statistics** on the right: water today, average flow, average per day over 30 days; salt and lime per day and per m³; next regeneration, last regeneration, number of regenerations, next inspection and maintenance.
@@ -26,8 +26,8 @@ With one softener the card needs no configuration. It finds the entities of the 
 
 | Tap on | Opens |
 |---|---|
-| A statistics block or row | Bar charts per day, month, year and in total |
-| Water meter, upper counter | Total water usage |
+| A statistics block or row | Bar charts per day, month and year; the *Total* tab shows figures instead of a single bar: total, average per day and, for water, the water meter, the calculated value against the cloud daily values and the deviation |
+| Water meter, upper counter | Total water usage. Shows the reading of the *Water meter* sensor once you adjusted it (see the README), otherwise the calculated consumption |
 | Water meter, lower counter | Water usage of today (ⓘ shows the flow history) |
 | Salt in the tank | Salt used since the last refill on a scale up to 35 kg, last refill |
 | Salt lamp | List of the refills with the usage before each one |

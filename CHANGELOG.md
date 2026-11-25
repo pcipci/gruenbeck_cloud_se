@@ -5,6 +5,9 @@
 ### Fixed
 * The deprecated `device_registry.async_get_device` is no longer used (Home Assistant logged a deprecation warning, removal in 2027.8).
 
+### Changed
+* Card: the *Total* tab of the water, salt and lime windows shows figures (total, average per day, for water also the water meter reading, calculated against cloud values and the deviation) instead of a chart with one bar. The water chart shows the average per day below the sum. The water meter in the pipe shows the reading of the *Water meter* sensor once it was adjusted.
+
 ### Added
 * Dashboard card `custom:gruenbeck-card`, served and registered by the integration (no resource to add): picture of the softener with live state, statistics, charts, salt usage since the last refill, regeneration details, maintenance and inspection windows with "done" buttons, the controls, a visual editor, English and German. See `docs/card.md`.
 * Automation blueprint *Grünbeck softener notifications*, installed to `blueprints/automation/gruenbeck_cloud_se/` on startup. See `docs/notifications.md`.
