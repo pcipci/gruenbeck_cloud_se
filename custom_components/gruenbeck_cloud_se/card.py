@@ -58,7 +58,18 @@ def ws_card_info(
         if coordinator is None:
             continue
         device_id = entry.data[CONF_DEVICE_ID]
-        device = device_registry.async_get_device(identifiers={(DOMAIN, device_id)})
+        # Looked up in the devices of this entry: async_get_device is
+        # deprecated, its replacement does not exist in older HA versions
+        device = next(
+            (
+                d
+                for d in dr.async_entries_for_config_entry(
+                    device_registry, entry.entry_id
+                )
+                if (DOMAIN, device_id) in d.identifiers
+            ),
+            None,
+        )
         if device is None:
             continue
 

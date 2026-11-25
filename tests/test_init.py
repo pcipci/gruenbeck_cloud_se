@@ -94,7 +94,7 @@ async def test_model_features(
     assert ("salt_warning" in keys) is salt
     assert ("led_ring_failure" in keys) is led
     assert ("mRescapa2" in keys) is exchanger_2
-    main = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
+    main = next(d for d in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id) if (DOMAIN, DEVICE_ID) in d.identifiers)
     assert main.model == model
 
 

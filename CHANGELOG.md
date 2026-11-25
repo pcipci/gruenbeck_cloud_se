@@ -2,6 +2,9 @@
 
 ## 0.3.0
 
+### Fixed
+* The deprecated `device_registry.async_get_device` is no longer used (Home Assistant logged a deprecation warning, removal in 2027.8).
+
 ### Added
 * Dashboard card `custom:gruenbeck-card`, served and registered by the integration (no resource to add): picture of the softener with live state, statistics, charts, salt usage since the last refill, regeneration details, maintenance and inspection windows with "done" buttons, the controls, a visual editor, English and German. See `docs/card.md`.
 * Automation blueprint *Grünbeck softener notifications*, installed to `blueprints/automation/gruenbeck_cloud_se/` on startup. See `docs/notifications.md`.
